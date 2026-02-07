@@ -11,8 +11,8 @@ Retrieve accurate pricing data from the BoothIQ knowledge base.
 
 | File | Path | Contents |
 |------|------|----------|
-| MASTER_CATALOG.md | `/mnt/documents/Hanoz - Booth Quote Autogen/MASTER_CATALOG.md` | Human-readable pricing reference |
-| components.json | `/mnt/documents/Hanoz - Booth Quote Autogen/components.json` | Structured component data |
+| MASTER_CATALOG.md | `Processed Files/MASTER_CATALOG.md` | Human-readable pricing reference |
+| components.json | `Processed Files/components.json` | Structured component data |
 
 ## Query Types
 
