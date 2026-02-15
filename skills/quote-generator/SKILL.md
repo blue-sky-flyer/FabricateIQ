@@ -59,6 +59,23 @@ Produce itemized quote with:
 
 ---
 
+## Chat Adjustment Mode
+
+When adjusting an existing quote via chat (mode: "chat"), the user's current quote JSON is provided as context. Follow these rules:
+
+1. **Preserve unchanged items** — only modify the specific line items the user mentions. Do NOT regenerate the entire quote from scratch; carry forward all unchanged categories and line items exactly as-is.
+2. **Recalculate cascading totals** — services are percentage-based on materials subtotal, so any material change must cascade: materials subtotal → services → contingency → subtotal before tax → tax → total.
+3. **Show the math** — in your natural-language response, explain what changed: old value → new value, and net impact on total (e.g., "Flooring dropped from $5,454 to $2,860, saving $2,594. With cascading adjustments, new total is $48,107 — saved $3,416").
+4. **What-if questions** — if the user asks "what if", "what would it cost", or is exploring without committing, set `whatIf: true` in your response. Show the comparison but make clear the change is not yet applied.
+5. **Undo/revert requests** — when asked to revert a change, apply it selectively. For example, "go back to G-Floor" should revert only the flooring while keeping other changes (like added furniture) intact.
+6. **Return format** — always return a JSON object with these fields:
+   - `updatedQuote`: the complete quote JSON (same schema as the original), with changes applied
+   - `response`: natural-language explanation of what changed and cost impact
+   - `whatIf`: boolean (true if this is exploratory, false if the change should be applied)
+   - `changesSummary`: short label for version history (e.g., "Swapped G-Floor for Printed Vinyl")
+
+---
+
 ## Pricing Reference (Toronto CAD)
 
 ### Walls $/sqft
