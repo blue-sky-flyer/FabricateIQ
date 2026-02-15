@@ -132,7 +132,139 @@ export default {
 
       const body = await request.json();
 
-      // Build Gemini request with structured output
+      // ── CHAT MODE: Adjust an existing quote via conversation ──
+      if (body.mode === 'chat') {
+        const model = body.model || 'gemini-2.5-flash';
+        const isGemini3 = model.startsWith('gemini-3');
+        const { currentQuote, message, conversationHistory } = body;
+
+        // Build chat-specific system prompt
+        const chatSystemPrompt = `${systemInstruction}
+
+---
+
+# CHAT ADJUSTMENT MODE
+
+You are adjusting an existing booth quote through conversation. The user's current quote JSON is provided below. Follow the "Chat Adjustment Mode" rules from SKILL.md above.
+
+RESPONSE FORMAT: Return ONLY a valid JSON object with these fields:
+{
+  "updatedQuote": { /* the COMPLETE quote JSON with changes applied — same schema as the original */ },
+  "response": "Natural language explanation of what changed and cost impact",
+  "whatIf": false,
+  "changesSummary": "Short label for version history (e.g., 'Swapped G-Floor for Printed Vinyl')"
+}
+
+RULES:
+- updatedQuote must contain the FULL quote (all fields), not just changed fields
+- Preserve all unchanged line items exactly as-is
+- Recalculate cascading totals: materials subtotal → services (percentage-based) → contingency → tax → total
+- If the user is asking a "what if" or exploratory question, set whatIf: true
+- Use whole numbers for dollar amounts
+- No markdown, no explanation outside the JSON — put your explanation in the "response" field`;
+
+        // Build conversation messages for Gemini
+        const geminiMessages = [];
+
+        // First message: provide the current quote context
+        geminiMessages.push({
+          role: 'user',
+          parts: [{ text: `Here is the current quote JSON:\n\n${JSON.stringify(currentQuote, null, 2)}` }]
+        });
+        geminiMessages.push({
+          role: 'model',
+          parts: [{ text: 'I have the current quote. What adjustments would you like to make?' }]
+        });
+
+        // Add conversation history (last 10 exchanges)
+        if (conversationHistory && conversationHistory.length > 0) {
+          for (const msg of conversationHistory.slice(-10)) {
+            geminiMessages.push({
+              role: msg.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: msg.content }]
+            });
+          }
+        }
+
+        // Add the current user message
+        geminiMessages.push({
+          role: 'user',
+          parts: [{ text: message }]
+        });
+
+        const geminiRequest = {
+          contents: geminiMessages,
+          systemInstruction: {
+            parts: [{ text: chatSystemPrompt }]
+          },
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 8192,
+            ...(isGemini3 && { thinkingConfig: { thinkingLevel: 'LOW' } })
+          }
+        };
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GOOGLE_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(geminiRequest)
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+        }
+
+        const geminiResponse = await response.json();
+        const textContent = geminiResponse.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!textContent) {
+          throw new Error('No content in Gemini response');
+        }
+
+        // Try to parse the chat response JSON
+        let chatResult;
+        try {
+          let cleanedText = textContent.trim();
+          if (cleanedText.startsWith('```json')) cleanedText = cleanedText.slice(7);
+          else if (cleanedText.startsWith('```')) cleanedText = cleanedText.slice(3);
+          if (cleanedText.endsWith('```')) cleanedText = cleanedText.slice(0, -3);
+          cleanedText = cleanedText.trim();
+
+          const jsonStart = cleanedText.indexOf('{');
+          const jsonEnd = cleanedText.lastIndexOf('}');
+          if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+            cleanedText = cleanedText.slice(jsonStart, jsonEnd + 1);
+          }
+
+          chatResult = JSON.parse(cleanedText);
+        } catch (parseError) {
+          // JSON parse failed — return the raw text as the response so the user still sees something
+          chatResult = {
+            updatedQuote: null,
+            response: textContent,
+            whatIf: false,
+            changesSummary: null,
+            error: 'Could not parse quote update from AI response'
+          };
+        }
+
+        return new Response(JSON.stringify({
+          updatedQuote: chatResult.updatedQuote || null,
+          response: chatResult.response || 'I processed your request but could not generate a response.',
+          whatIf: chatResult.whatIf || false,
+          changesSummary: chatResult.changesSummary || null,
+          model,
+          usage: geminiResponse.usageMetadata
+        }), {
+          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // ── QUOTE MODE: Generate a new quote (existing flow, unchanged) ──
       const model = body.model || 'gemini-2.5-flash';
       const isGemini3 = model.startsWith('gemini-3');
 
