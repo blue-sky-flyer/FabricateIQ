@@ -1,5 +1,5 @@
 {
-  "buildCommand": "echo 'static site'",
-  "outputDirectory": ".",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "cleanUrls": true
 }

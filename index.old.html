@@ -1,0 +1,2421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FabricateIQ - Professional Booth Estimation</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎪</text></svg>">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="lib/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <style>
+    /* Apple-inspired design system */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      color: #1d1d1f;
+      line-height: 1.47059;
+      letter-spacing: -0.022em;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 60px 20px;
+    }
+
+    /* Header - minimal, centered */
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .header h1 {
+      font-size: 48px;
+      font-weight: 600;
+      letter-spacing: -0.003em;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #1d1d1f 0%, #515154 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header p {
+      font-size: 21px;
+      color: #86868b;
+      font-weight: 400;
+    }
+
+    /* Cards with subtle depth */
+    .card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 40px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+    }
+
+    .card-header {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: #1d1d1f;
+    }
+
+    /* Form elements - Apple style */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 0;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #86868b;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+
+    select, input[type="number"] {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid #d2d2d7;
+      border-radius: 12px;
+      font-size: 17px;
+      font-family: inherit;
+      background: #ffffff;
+      color: #1d1d1f;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2386868b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+      padding-right: 40px;
+    }
+
+    select:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: #0071e3;
+      box-shadow: 0 0 0 4px rgba(0,113,227,0.1);
+    }
+
+    /* Segmented controls */
+    .segment-control {
+      display: flex;
+      background: #f5f5f7;
+      border-radius: 10px;
+      padding: 3px;
+      gap: 0;
+    }
+
+    .segment-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #86868b;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .segment-btn:hover {
+      color: #1d1d1f;
+    }
+
+    .segment-btn.active {
+      background: #ffffff;
+      color: #1d1d1f;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Disabled state for form controls (when PDF uploaded) */
+    input:disabled, select:disabled, button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .segment-btn:disabled, .pill-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* Duration pills */
+    .duration-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pill-btn {
+      padding: 10px 20px;
+      border: 1px solid #d2d2d7;
+      background: #ffffff;
+      border-radius: 980px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #1d1d1f;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .pill-btn:hover {
+      border-color: #86868b;
+    }
+
+    .pill-btn.active {
+      background: #1d1d1f;
+      border-color: #1d1d1f;
+      color: #ffffff;
+    }
+
+    /* Dimensions grid */
+    .dimensions-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .dimensions-x {
+      font-size: 24px;
+      color: #86868b;
+      text-align: center;
+      padding-bottom: 14px;
+    }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed #d2d2d7;
+      border-radius: 18px;
+      padding: 48px;
+      text-align: center;
+      cursor: pointer;
+      background: #fafafa;
+      transition: all 0.2s ease;
+    }
+
+    .upload-zone:hover {
+      border-color: #86868b;
+      background: #f5f5f7;
+    }
+
+    .upload-zone.dragging {
+      border-color: #0071e3;
+      background: rgba(0,113,227,0.04);
+    }
+
+    .upload-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+
+    .upload-zone p {
+      margin: 0;
+      color: #86868b;
+      font-size: 14px;
+    }
+
+    .upload-zone p:first-of-type {
+      font-size: 17px;
+      font-weight: 500;
+      color: #1d1d1f;
+      margin-bottom: 4px;
+    }
+
+    /* Primary CTA - Apple blue */
+    .btn-primary {
+      width: 100%;
+      padding: 18px 32px;
+      background: #0071e3;
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      letter-spacing: -0.022em;
+    }
+
+    .btn-primary:hover {
+      background: #0077ed;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary:disabled {
+      background: #d2d2d7;
+      cursor: not-allowed;
+    }
+
+    /* Secondary button */
+    .btn-secondary {
+      width: 100%;
+      padding: 14px 24px;
+      background: transparent;
+      color: #0071e3;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(0,113,227,0.08);
+    }
+
+    /* AI Quote result - hero display */
+    .quote-result {
+      text-align: center;
+      padding: 48px 32px;
+    }
+
+    .quote-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: #f5f5f7;
+      border-radius: 980px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #86868b;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+    }
+
+    .quote-badge.ai {
+      background: linear-gradient(135deg, #5e5ce6 0%, #bf5af2 100%);
+      color: #ffffff;
+    }
+
+    .quote-total {
+      font-size: 72px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      color: #1d1d1f;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .quote-label {
+      font-size: 17px;
+      color: #86868b;
+      margin-bottom: 24px;
+    }
+
+    .confidence-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 980px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .confidence-badge.high {
+      background: rgba(52,199,89,0.12);
+      color: #248a3d;
+    }
+
+    .confidence-badge.medium {
+      background: rgba(255,159,10,0.12);
+      color: #b25000;
+    }
+
+    .confidence-badge.low {
+      background: rgba(255,59,48,0.12);
+      color: #d70015;
+    }
+
+    /* Breakdown sections */
+    .breakdown-section {
+      border-top: 1px solid #e8e8ed;
+      padding-top: 32px;
+      margin-top: 32px;
+    }
+
+    .breakdown-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 640px) {
+      .breakdown-grid { grid-template-columns: 1fr; }
+    }
+
+    .breakdown-card {
+      background: #f5f5f7;
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    .breakdown-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #86868b;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+    }
+
+    .breakdown-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 15px;
+    }
+
+    .breakdown-item-label {
+      color: #86868b;
+    }
+
+    .breakdown-item-value {
+      font-weight: 500;
+      color: #1d1d1f;
+    }
+
+    .breakdown-subtotal {
+      border-top: 1px solid #d2d2d7;
+      margin-top: 8px;
+      padding-top: 12px;
+    }
+
+    .breakdown-subtotal .breakdown-item-label,
+    .breakdown-subtotal .breakdown-item-value {
+      color: #1d1d1f;
+      font-weight: 600;
+    }
+
+    /* Summary row */
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 16px 0;
+      font-size: 17px;
+      border-top: 1px solid #e8e8ed;
+    }
+
+    .summary-row:first-child {
+      border-top: none;
+    }
+
+    .summary-row.total {
+      font-size: 21px;
+      font-weight: 600;
+    }
+
+    /* Notes section */
+    .notes-section {
+      background: #fffbeb;
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 24px;
+    }
+
+    .notes-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #92400e;
+      margin-bottom: 12px;
+    }
+
+    .notes-list {
+      margin: 0;
+      padding-left: 20px;
+      font-size: 14px;
+      color: #78350f;
+    }
+
+    .notes-list li {
+      margin-bottom: 6px;
+    }
+
+    /* Line item detail rows */
+    .line-items-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 0;
+      font-size: 12px;
+      color: #0071e3;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: inherit;
+    }
+
+    .line-items-toggle:hover {
+      color: #0077ed;
+    }
+
+    .line-items-toggle .arrow {
+      font-size: 10px;
+      transition: transform 0.2s ease;
+    }
+
+    .line-items-toggle .arrow.open {
+      transform: rotate(90deg);
+    }
+
+    .line-items-table {
+      width: 100%;
+      font-size: 12px;
+      border-collapse: collapse;
+      margin: 8px 0 12px 0;
+    }
+
+    .line-items-table th {
+      text-align: left;
+      padding: 6px 8px;
+      font-weight: 600;
+      color: #86868b;
+      border-bottom: 1px solid #e8e8ed;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .line-items-table th:last-child {
+      text-align: right;
+    }
+
+    .line-items-table td {
+      padding: 5px 8px;
+      color: #1d1d1f;
+      border-bottom: 1px solid #f0f0f2;
+    }
+
+    .line-items-table td:last-child {
+      text-align: right;
+      font-weight: 500;
+    }
+
+    .line-items-table .conf-badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .line-items-table .conf-badge.high { background: rgba(52,199,89,0.12); color: #248a3d; }
+    .line-items-table .conf-badge.medium { background: rgba(255,159,10,0.12); color: #b25000; }
+    .line-items-table .conf-badge.low { background: rgba(255,59,48,0.12); color: #d70015; }
+
+    .service-note {
+      font-size: 12px;
+      color: #86868b;
+      font-style: italic;
+      padding: 2px 0 4px 0;
+    }
+
+    /* Collapsible section */
+    .collapsible-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      cursor: pointer;
+      border-top: 1px solid #e8e8ed;
+    }
+
+    .collapsible-header h3 {
+      font-size: 17px;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    .collapsible-toggle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #f5f5f7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: #86868b;
+      transition: transform 0.2s ease;
+    }
+
+    .collapsible-toggle.open {
+      transform: rotate(180deg);
+    }
+
+    .collapsible-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .collapsible-content.open {
+      max-height: 2000px;
+    }
+
+    /* Template estimates (secondary) */
+    .template-estimates {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      padding-bottom: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .template-estimates { grid-template-columns: 1fr; }
+    }
+
+    .template-card {
+      background: #f5f5f7;
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    .template-card.budget { border-left: 4px solid #ff3b30; }
+    .template-card.standard { border-left: 4px solid #ff9500; }
+    .template-card.premium { border-left: 4px solid #007aff; }
+
+    .template-tier {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+
+    .template-card.budget .template-tier { color: #ff3b30; }
+    .template-card.standard .template-tier { color: #ff9500; }
+    .template-card.premium .template-tier { color: #007aff; }
+
+    .template-total {
+      font-size: 28px;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    /* Error state */
+    .error-banner {
+      background: rgba(255,59,48,0.08);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      font-size: 15px;
+      color: #d70015;
+    }
+
+    /* Loading state */
+    .loading-state {
+      text-align: center;
+      padding: 48px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #e8e8ed;
+      border-top-color: #0071e3;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      color: #86868b;
+      font-size: 15px;
+    }
+
+    /* Preview images */
+    .preview-img {
+      max-width: 100%;
+      border-radius: 14px;
+      margin-top: 16px;
+    }
+
+    .pdf-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #f5f5f7;
+      border-radius: 10px;
+      font-size: 14px;
+      color: #1d1d1f;
+      margin-top: 16px;
+    }
+
+    .clear-pdf-btn {
+      background: none;
+      border: none;
+      color: #86868b;
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 14px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      margin-left: 4px;
+    }
+
+    .clear-pdf-btn:hover {
+      background: #e8e8ed;
+      color: #1d1d1f;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 64px 32px;
+      color: #86868b;
+    }
+
+    .empty-state-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    /* ── Chat Panel (right-side slide-out) ── */
+    .chat-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.15);
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .chat-backdrop.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .chat-panel {
+      position: fixed;
+      right: 0;
+      top: 0;
+      height: 100vh;
+      width: max(400px, 30vw);
+      max-width: 480px;
+      background: #ffffff;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+    }
+
+    .chat-panel.open {
+      transform: translateX(0);
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      border-bottom: 1px solid #f0f0f0;
+      flex-shrink: 0;
+    }
+
+    .chat-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chat-header-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    .chat-version-badge {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #5e5ce6 0%, #bf5af2 100%);
+      color: white;
+    }
+
+    .chat-close-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: #f5f5f7;
+      color: #86868b;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .chat-close-btn:hover {
+      background: #e8e8ed;
+      color: #1d1d1f;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Floating chat trigger button */
+    .chat-fab {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 998;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 24px;
+      background: linear-gradient(135deg, #5e5ce6 0%, #bf5af2 100%);
+      color: white;
+      border: none;
+      border-radius: 980px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(94,92,230,0.4);
+      transition: all 0.2s ease;
+    }
+
+    .chat-fab:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(94,92,230,0.5);
+    }
+
+    .chat-fab:active {
+      transform: scale(0.97);
+    }
+
+    @media (max-width: 768px) {
+      .chat-panel {
+        width: 100vw;
+        max-width: 100vw;
+      }
+    }
+
+    .chat-welcome {
+      background: #f5f5f7;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 14px;
+      color: #1d1d1f;
+      line-height: 1.5;
+    }
+
+    .chat-welcome-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .chat-welcome ul {
+      margin: 8px 0 0 0;
+      padding-left: 20px;
+      color: #515154;
+    }
+
+    .chat-welcome li {
+      margin-bottom: 4px;
+      font-style: italic;
+    }
+
+    .chat-bubble {
+      max-width: 85%;
+      padding: 10px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+
+    .chat-bubble-user {
+      align-self: flex-end;
+      background: #0071e3;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-bubble-assistant {
+      align-self: flex-start;
+      background: #f0f0f5;
+      color: #1d1d1f;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-bubble-assistant.what-if {
+      border-left: 3px solid #bf5af2;
+    }
+
+    .chat-applied-badge {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 8px;
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .chat-whatif-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .chat-whatif-actions button {
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .chat-btn-apply {
+      background: #0071e3;
+      color: white;
+    }
+
+    .chat-btn-apply:hover {
+      background: #0077ed;
+    }
+
+    .chat-btn-keep {
+      background: #e8e8ed;
+      color: #1d1d1f;
+    }
+
+    .chat-btn-keep:hover {
+      background: #d2d2d7;
+    }
+
+    .chat-typing {
+      align-self: flex-start;
+      padding: 12px 16px;
+      background: #f0f0f5;
+      border-radius: 16px;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .chat-typing-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #86868b;
+      animation: chatDotPulse 1.4s ease-in-out infinite;
+    }
+
+    .chat-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .chat-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes chatDotPulse {
+      0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+      30% { opacity: 1; transform: scale(1); }
+    }
+
+    .chat-input-area {
+      display: flex;
+      gap: 8px;
+      padding: 12px 24px 16px;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 10px 16px;
+      border: 1px solid #d2d2d7;
+      border-radius: 12px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .chat-input:focus {
+      border-color: #0071e3;
+    }
+
+    .chat-input:disabled {
+      background: #f5f5f7;
+      color: #86868b;
+    }
+
+    .chat-send-btn {
+      padding: 10px 20px;
+      background: #0071e3;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .chat-send-btn:hover {
+      background: #0077ed;
+    }
+
+    .chat-send-btn:disabled {
+      background: #d2d2d7;
+      cursor: not-allowed;
+    }
+
+    .chat-error-badge {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 11px;
+      color: #d32f2f;
+      font-style: italic;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .container { padding: 40px 16px; }
+      .card { padding: 24px; border-radius: 14px; }
+      .header h1 { font-size: 34px; }
+      .header p { font-size: 17px; }
+      .quote-total { font-size: 48px; }
+      .form-grid { gap: 16px; }
+      .dimensions-grid { grid-template-columns: 1fr; gap: 8px; }
+      .dimensions-x { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    // PDF.js is optional - app works without it (just no PDF upload)
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
+    }
+
+    // Cloudflare Worker URLs - handle API keys and SKILL.md server-side
+    const CLAUDE_WORKER_URL = 'https://fabricateiq-proxy.raj-lucia001.workers.dev';
+    const GEMINI_WORKER_URL = 'https://fabricateiq-gemini.raj-lucia001.workers.dev';
+
+    const DURATION_OPTIONS = [1, 3, 7, 30];
+
+    const CATALOG_PRICING = {
+      walls: {
+        paintedMDF: 68.75,
+        oakWood: 103.13,
+        complexMillwork: 157.78,
+      },
+      flooring: {
+        standardCarpet: 5.50,
+        printedVinyl: 14.30,
+        gFloorNew: 27.27,
+        astroTurf: 16.92
+      }
+    };
+
+    // Line item detail component
+    function LineItemDetail({ lineItems, label, currency }) {
+      const [open, setOpen] = React.useState(false);
+      if (!lineItems || lineItems.length === 0) return null;
+
+      return (
+        <div>
+          <button className="line-items-toggle" onClick={() => setOpen(!open)}>
+            <span className={`arrow ${open ? 'open' : ''}`}>&#9654;</span>
+            {open ? 'Hide' : 'Show'} {lineItems.length} line item{lineItems.length !== 1 ? 's' : ''}
+          </button>
+          {open && (
+            <table className="line-items-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Qty</th>
+                  <th>Dimensions</th>
+                  <th>Unit Price</th>
+                  <th>Conf</th>
+                  <th>Extended</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lineItems.map((li, i) => (
+                  <tr key={i}>
+                    <td>{li.item}</td>
+                    <td>{li.qty || ''}</td>
+                    <td>{li.dimensions || ''}</td>
+                    <td>{li.unit_price || ''}</td>
+                    <td>{li.confidence ? <span className={`conf-badge ${li.confidence}`}>{li.confidence}</span> : ''}</td>
+                    <td>{new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'CAD', currencyDisplay: 'code', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(li.extended || 0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      );
+    }
+
+    function FabricateIQ() {
+      const [location, setLocation] = React.useState('toronto');
+      const [width, setWidth] = React.useState(10);
+      const [length, setLength] = React.useState(10);
+      const [indoor, setIndoor] = React.useState(true);
+      const [duration, setDuration] = React.useState(3);
+      const [groundLevel, setGroundLevel] = React.useState('not-sure');
+      const [components, setComponents] = React.useState(null);
+      const [estimates, setEstimates] = React.useState(null);
+      const [uploadedImage, setUploadedImage] = React.useState(null);
+      const [uploadedPDF, setUploadedPDF] = React.useState(null);
+      const [pdfText, setPdfText] = React.useState('');
+      const [analyzing, setAnalyzing] = React.useState(false);
+      const [error, setError] = React.useState('');
+      const fileInputRef = React.useRef(null);
+      const [dragging, setDragging] = React.useState(false);
+      const [aiQuote, setAiQuote] = React.useState(null);
+      const [loadingAiQuote, setLoadingAiQuote] = React.useState(false);
+      const [showTemplates, setShowTemplates] = React.useState(false);
+
+      // Chat state
+      const [showChat, setShowChat] = React.useState(false);
+      const [chatMessages, setChatMessages] = React.useState([]);
+      const [chatInput, setChatInput] = React.useState('');
+      const [chatLoading, setChatLoading] = React.useState(false);
+      const [quoteVersions, setQuoteVersions] = React.useState([]);
+      const chatEndRef = React.useRef(null);
+
+      const calculateBoothSpecs = () => {
+        const w = parseFloat(width) || 0;
+        const l = parseFloat(length) || 0;
+        const perimeter = (w + l) * 2;
+        const wallSqft = perimeter * 10;
+        const floorSqft = w * l;
+
+        return {
+          wallSqft,
+          floorSqft,
+          wallType: 'paintedMDF',
+          floorType: 'standardCarpet',
+          graphics: 'moderate'
+        };
+      };
+
+      const extractPdfText = async (file) => {
+        if (typeof pdfjsLib === 'undefined') {
+          throw new Error('PDF support unavailable - try uploading an image instead');
+        }
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          let fullText = '';
+
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map((item) => item.str).join(' ');
+            fullText += pageText + '\n';
+          }
+
+          return fullText;
+        } catch (err) {
+          throw new Error('Failed to extract PDF text: ' + err.message);
+        }
+      };
+
+      const calculateMaterials = (comps) => {
+        let cost = 0;
+        cost += (comps.wallSqft || 0) * (CATALOG_PRICING.walls[comps.wallType] || 68.75);
+        const floorPrices = {
+          standardCarpet: 5.50,
+          printedVinyl: 14.30,
+          gFloorNew: 27.27,
+          astroTurf: 16.92
+        };
+        cost += (comps.floorSqft || 0) * (floorPrices[comps.floorType] || 5.50);
+
+        const graphicsPrices = { modest: 12, moderate: 25, premium: 45, extensive: 60 };
+        cost += (comps.graphicsEstimate || 100) * (graphicsPrices[comps.graphics] || 25);
+
+        return cost;
+      };
+
+      const calculateEstimates = (comps, loc, dur, env, ground) => {
+        const materials = calculateMaterials(comps);
+        const subtotal = materials;
+
+        const serviceRates = {
+          toronto: { designPM: 0.09, installDismantle: 0.14, logistics: 0.05 },
+          montreal: { designPM: 0.12, installDismantle: 0.36, logistics: 0.12 },
+          usa: { designPM: 0.10, installDismantle: 0.20, logistics: 0.15 }
+        };
+
+        const rates = serviceRates[loc] || serviceRates.toronto;
+
+        const durationMultipliers = { 1: 1.0, 3: 0.82, 7: 0.60, 30: 0.65 };
+        const durationMult = durationMultipliers[dur] || 0.95;
+        const outdoorMult = env === 'outdoor' ? 1.15 : 1.0;
+        const groundMultiplier = ground === 'no' ? 1.20 : ground === 'yes' ? 1.0 : 1.08;
+
+        const estimates = {
+          aggressive: {
+            materials: materials * 0.85,
+            designPM: subtotal * rates.designPM * 0.85 * durationMult * outdoorMult,
+            installDismantle: subtotal * rates.installDismantle * 0.80 * outdoorMult * groundMultiplier,
+            logistics: subtotal * rates.logistics * 0.90 * durationMult,
+            contingency: 0
+          },
+          middle: {
+            materials: materials,
+            designPM: subtotal * rates.designPM * durationMult * outdoorMult,
+            installDismantle: subtotal * rates.installDismantle * outdoorMult * groundMultiplier,
+            logistics: subtotal * rates.logistics * durationMult,
+            contingency: subtotal * 0.05
+          },
+          conservative: {
+            materials: materials * 1.20,
+            designPM: subtotal * rates.designPM * 1.15 * durationMult * outdoorMult,
+            installDismantle: subtotal * rates.installDismantle * 1.20 * outdoorMult * groundMultiplier,
+            logistics: subtotal * rates.logistics * 1.15 * durationMult,
+            contingency: subtotal * 0.15
+          }
+        };
+
+        return Object.entries(estimates).reduce((acc, [tier, costs]) => {
+          acc[tier] = {
+            ...costs,
+            total: Object.values(costs).reduce((sum, val) => sum + val, 0)
+          };
+          return acc;
+        }, {});
+      };
+
+      const updateEstimates = (newComps = null) => {
+        const specs = newComps || calculateBoothSpecs();
+        setComponents(specs);
+        const calcs = calculateEstimates(specs, location, duration, indoor ? 'indoor' : 'outdoor', groundLevel);
+        setEstimates(calcs);
+      };
+
+      React.useEffect(() => {
+        updateEstimates();
+      }, [location, width, length, indoor, duration, groundLevel]);
+
+      const analyzeWithClaude = async (imageBase64 = null, pdfTextContent = '', imageMediaType = 'image/jpeg') => {
+        try {
+          const jsonSchema = '{wallSqft: number, floorSqft: number, wallType: "paintedMDF"|"oakWood"|"complexMillwork", floorType: "standardCarpet"|"printedVinyl"|"gFloorNew"|"astroTurf", graphics: "modest"|"moderate"|"premium"|"extensive", graphicsEstimate: number}';
+
+          let messageContent = [];
+
+          if (imageBase64) {
+            // Add image to message content for Claude Vision
+            messageContent.push({
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: imageMediaType,
+                data: imageBase64
+              }
+            });
+          }
+
+          // Build prompt text based on what we have
+          let promptText = '';
+          if (pdfTextContent && imageBase64) {
+            promptText = `Analyze this booth rendering image along with the PDF parts list below. Extract component details.\n\nPDF Content:\n${pdfTextContent}\n\nReturn ONLY valid JSON: ${jsonSchema}. No markdown, no explanation.`;
+          } else if (pdfTextContent) {
+            promptText = `Extract booth component details from this parts list PDF text.\n\nPDF Content:\n${pdfTextContent}\n\nReturn ONLY valid JSON: ${jsonSchema}. No markdown, no explanation.`;
+          } else if (imageBase64) {
+            promptText = `Analyze this booth rendering image. Estimate wall square footage, floor area, materials used, and graphics complexity. Return ONLY valid JSON: ${jsonSchema}. No markdown, no explanation.`;
+          }
+
+          messageContent.push({ type: 'text', text: promptText });
+
+          const response = await fetch(CLAUDE_WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: [{ role: 'user', content: messageContent }]
+            })
+          });
+
+          const data = await response.json();
+          console.log('Claude response:', JSON.stringify(data, null, 2));
+
+          // Check for worker error
+          if (data.error) {
+            throw new Error(data.error);
+          }
+
+          // Check for Claude API error
+          if (data.type === 'error') {
+            throw new Error(data.error?.message || 'Claude API error');
+          }
+
+          if (!response.ok) throw new Error('Worker API failed');
+
+          // Validate response structure
+          if (!data.content || !data.content[0] || !data.content[0].text) {
+            console.error('Unexpected Claude response structure:', data);
+            throw new Error('Invalid response from Claude');
+          }
+
+          console.log('Claude analysis:', data.content[0].text);
+
+          // Clean JSON from markdown code fences if present
+          let jsonText = data.content[0].text.trim();
+          if (jsonText.startsWith('```json')) {
+            jsonText = jsonText.slice(7);
+          } else if (jsonText.startsWith('```')) {
+            jsonText = jsonText.slice(3);
+          }
+          if (jsonText.endsWith('```')) {
+            jsonText = jsonText.slice(0, -3);
+          }
+          jsonText = jsonText.trim();
+
+          return JSON.parse(jsonText);
+        } catch (err) {
+          throw new Error('Analysis failed: ' + err.message);
+        }
+      };
+
+      // Get structured AI quote from Gemini
+      const getAIQuote = async () => {
+        setError('');
+        setLoadingAiQuote(true);
+        setAiQuote(null);
+
+        try {
+          let promptText;
+
+          if (pdfText) {
+            // PDF uploaded - base quote on LINE ITEMS from the PDF
+            promptText = `Generate a booth quote based PRIMARILY on the LINE ITEMS in this PDF document.
+
+CRITICAL: The line items (individual costs for materials, labor, services) in the PDF are the PRIMARY source for this quote. Sum them up and categorize them appropriately.
+
+PDF CONTENT:
+${pdfText.substring(0, 6000)}
+
+Instructions:
+1. EXTRACT ALL LINE ITEMS from the PDF - these are your primary pricing data
+2. Sum line items into categories:
+   - Materials: walls/fabrication, flooring, graphics, AV/lighting, furniture, rentals
+   - Services: design/PM, install/dismantle, labor, logistics/shipping/drayage
+3. Extract booth dimensions and location if mentioned
+4. Apply appropriate tax rate based on location (13% Ontario HST, 14.975% Quebec GST+QST)
+5. The TOTAL should closely match the sum of line items from the PDF (plus tax if not included)
+
+Do NOT invent prices - use the actual line item costs from the PDF.
+Use the calibrated service ratios from SKILL.md only if specific service costs are not itemized in the PDF.`;
+          } else {
+            // Manual entry - use form values
+            const specs = {
+              width: parseFloat(width) || 10,
+              length: parseFloat(length) || 10,
+              location: location,
+              environment: indoor ? 'indoor' : 'outdoor',
+              duration: duration,
+              groundLevel: groundLevel
+            };
+
+            promptText = `Generate a detailed booth quote for:
+- Dimensions: ${specs.width}ft × ${specs.length}ft (${specs.width * specs.length} sq ft)
+- Location: ${specs.location}
+- Currency: ${getCurrency()}
+- Environment: ${specs.environment}
+- Duration: ${specs.duration} days
+- Ground Level: ${specs.groundLevel === 'yes' ? 'Yes (level floor)' : specs.groundLevel === 'no' ? 'No (uneven, requires leveling)' : 'Unknown'}
+
+Provide a complete quote with materials breakdown, services (design/PM, install/dismantle, logistics), tax, and total. Use the calibrated service ratios from the SKILL.md for this project type.`;
+          }
+
+          const response = await fetch(GEMINI_WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: [{ role: 'user', content: promptText }],
+              model: 'gemini-3-pro-preview'
+            })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Gemini API failed');
+          }
+
+          const data = await response.json();
+          console.log('Gemini AI Quote:', JSON.stringify(data, null, 2));
+          setAiQuote(data.quote);
+          setQuoteVersions([{ quote: data.quote, label: 'Original' }]);
+          setChatMessages([]);
+          setChatInput('');
+
+        } catch (err) {
+          console.error('AI Quote error:', err);
+          setError('AI Quote failed: ' + err.message);
+        } finally {
+          setLoadingAiQuote(false);
+        }
+      };
+
+      // ── Chat: send adjustment message ──
+      const sendChatMessage = async () => {
+        const msg = chatInput.trim();
+        if (!msg || chatLoading) return;
+
+        const userMsg = { role: 'user', content: msg, timestamp: Date.now() };
+        setChatMessages(prev => [...prev, userMsg]);
+        setChatInput('');
+        setChatLoading(true);
+
+        try {
+          const response = await fetch(GEMINI_WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              mode: 'chat',
+              currentQuote: aiQuote,
+              message: msg,
+              conversationHistory: chatMessages.slice(-10),
+              model: 'gemini-3-pro-preview'
+            })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Chat request failed');
+          }
+
+          const data = await response.json();
+
+          const assistantMsg = {
+            role: 'assistant',
+            content: data.response,
+            whatIf: data.whatIf || false,
+            updatedQuote: data.updatedQuote,
+            timestamp: Date.now()
+          };
+          setChatMessages(prev => [...prev, assistantMsg]);
+
+          // Auto-apply unless it's a "what if"
+          if (!data.whatIf && data.updatedQuote) {
+            setAiQuote(data.updatedQuote);
+            setQuoteVersions(prev => [...prev, {
+              quote: data.updatedQuote,
+              label: data.changesSummary || msg.substring(0, 50)
+            }]);
+          }
+        } catch (err) {
+          console.error('Chat error:', err);
+          setChatMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'Sorry, I had trouble processing that. Please try again.',
+            timestamp: Date.now()
+          }]);
+        } finally {
+          setChatLoading(false);
+        }
+      };
+
+      // ── Chat: apply a "what if" quote ──
+      const applyWhatIf = (msgIndex) => {
+        const msg = chatMessages[msgIndex];
+        if (msg && msg.updatedQuote) {
+          setAiQuote(msg.updatedQuote);
+          setQuoteVersions(prev => [...prev, {
+            quote: msg.updatedQuote,
+            label: 'Applied what-if change'
+          }]);
+          // Mark as applied in chat
+          setChatMessages(prev => prev.map((m, i) =>
+            i === msgIndex ? { ...m, whatIf: false, applied: true } : m
+          ));
+        }
+      };
+
+      // Auto-scroll chat to bottom
+      React.useEffect(() => {
+        if (chatEndRef.current) {
+          chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, [chatMessages, chatLoading]);
+
+      // Resize image if too large for Claude API (5MB limit)
+      const resizeImageIfNeeded = async (file, maxSizeBytes = 4.5 * 1024 * 1024) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = async (event) => {
+            const dataUrl = event.target.result;
+            const base64Size = dataUrl.split(',')[1].length * 0.75; // Approximate decoded size
+
+            // If under limit, return as-is
+            if (base64Size <= maxSizeBytes) {
+              resolve({ base64: dataUrl.split(',')[1], mediaType: file.type || 'image/jpeg' });
+              return;
+            }
+
+            // Resize using canvas
+            const img = new Image();
+            img.onload = () => {
+              // Calculate scale factor to get under limit
+              const scaleFactor = Math.sqrt(maxSizeBytes / base64Size) * 0.9;
+              const newWidth = Math.floor(img.width * scaleFactor);
+              const newHeight = Math.floor(img.height * scaleFactor);
+
+              const canvas = document.createElement('canvas');
+              canvas.width = newWidth;
+              canvas.height = newHeight;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+              // Convert to JPEG for better compression
+              const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+              resolve({ base64: resizedDataUrl.split(',')[1], mediaType: 'image/jpeg' });
+            };
+            img.onerror = () => reject(new Error('Failed to load image for resizing'));
+            img.src = dataUrl;
+          };
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsDataURL(file);
+        });
+      };
+
+      const handleImageUpload = async (file) => {
+        if (!file) return;
+
+        setError('');
+        setAnalyzing(true);
+        setUploadedImage(URL.createObjectURL(file));
+
+        try {
+          // Resize image if needed (Claude has 5MB limit)
+          const { base64, mediaType } = await resizeImageIfNeeded(file);
+          const extracted = await analyzeWithClaude(base64, pdfText, mediaType);
+          updateEstimates(extracted);
+        } catch (err) {
+          setError('Error analyzing rendering: ' + err.message);
+        } finally {
+          setAnalyzing(false);
+        }
+      };
+
+      const handlePdfUpload = async (file) => {
+        if (!file) return;
+
+        setError('');
+        setAnalyzing(true);
+        setUploadedPDF(file.name);
+
+        try {
+          const text = await extractPdfText(file);
+          setPdfText(text);
+
+          const extracted = await analyzeWithClaude(null, text);
+          updateEstimates(extracted);
+        } catch (err) {
+          setError('Error analyzing PDF: ' + err.message);
+          setUploadedPDF(null);
+          setPdfText('');
+        } finally {
+          setAnalyzing(false);
+        }
+      };
+
+      const handleFileUpload = (file) => {
+        if (!file) return;
+
+        if (file.type === 'application/pdf') {
+          handlePdfUpload(file);
+        } else if (file.type.startsWith('image/')) {
+          handleImageUpload(file);
+        } else {
+          setError('Please upload an image (JPG, PNG) or PDF file');
+        }
+      };
+
+      const getCurrency = () => location === 'usa' ? 'USD' : 'CAD';
+
+      const formatCurrency = (value) => {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: getCurrency(),
+          currencyDisplay: 'code',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        }).format(value || 0);
+      };
+
+      const downloadQuote = async () => {
+        if (!aiQuote) return;
+
+        // ── Color palette ──
+        const C = {
+          darkBg: 'FF2C2C2E', white: 'FFFFFFFF', lightGray: 'FFF5F5F7',
+          lightBlue: 'FFE3F2FD', medGray: 'FF86868B', primaryDark: 'FF1D1D1F',
+          yellowBg: 'FFFFFBEB', yellowText: 'FF92400E',
+          greenBg: 'FFE8F5E9', green: 'FF34C759',
+          orangeBg: 'FFFFF3E0', orange: 'FFFF9500',
+          redBg: 'FFFFEBEE', red: 'FFFF3B30',
+          gridLine: 'FFE0E0E0'
+        };
+        const currFmt = '"$"#,##0.00';
+        const thinBorder = { style: 'thin', color: { argb: C.gridLine } };
+        const medBorder = { style: 'medium' };
+
+        // ── Style helpers ──
+        const fillSolid = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+        const applyGridBorders = (row, cols) => {
+          for (let c = 1; c <= cols; c++) {
+            row.getCell(c).border = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+          }
+        };
+        const writeSectionHeader = (ws, r, text) => {
+          ws.mergeCells(r, 1, r, 8);
+          const cell = ws.getCell(r, 1);
+          cell.value = text;
+          cell.font = { bold: true, size: 12, color: { argb: C.white } };
+          cell.fill = fillSolid(C.darkBg);
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = { top: medBorder, bottom: medBorder, left: medBorder, right: medBorder };
+          ws.getRow(r).height = 24;
+        };
+        const writeSubtotalRow = (ws, r, label, amount) => {
+          const row = ws.getRow(r);
+          row.getCell(1).value = label;
+          row.getCell(1).font = { bold: true, size: 11 };
+          row.getCell(2).value = amount;
+          row.getCell(2).numFmt = currFmt;
+          row.getCell(2).font = { bold: true, size: 11 };
+          for (let c = 1; c <= 8; c++) {
+            row.getCell(c).fill = fillSolid(C.lightGray);
+            row.getCell(c).border = { top: medBorder, bottom: medBorder };
+          }
+        };
+        const writeConfidence = (cell, conf) => {
+          const lc = (conf || '').toLowerCase();
+          cell.value = lc.toUpperCase();
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.font = { bold: true, size: 9, color: { argb: lc === 'high' ? C.green : lc === 'medium' ? C.orange : lc === 'low' ? C.red : C.medGray } };
+          if (lc === 'high') cell.fill = fillSolid(C.greenBg);
+          else if (lc === 'medium') cell.fill = fillSolid(C.orangeBg);
+          else if (lc === 'low') cell.fill = fillSolid(C.redBg);
+        };
+
+        // ── Spec data ──
+        const specs = aiQuote.booth_specs || {};
+        const displayDimensions = specs.dimensions || `${width}ft × ${length}ft`;
+        const displayLocation = specs.location || (location.charAt(0).toUpperCase() + location.slice(1));
+        const displayEvent = specs.event_name || '';
+        const displayDuration = specs.duration_days ? `${specs.duration_days} days` : `${duration} day${duration > 1 ? 's' : ''}`;
+        const currency = getCurrency();
+
+        // ── Create workbook & worksheet ──
+        const workbook = new ExcelJS.Workbook();
+        const ws = workbook.addWorksheet('Quote', {
+          pageSetup: { fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9, orientation: 'portrait',
+            margins: { left: 0.5, right: 0.5, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 } }
+        });
+
+        // Column widths
+        ws.columns = [
+          { width: 20 }, { width: 16 }, { width: 35 }, { width: 8 },
+          { width: 15 }, { width: 15 }, { width: 13 }, { width: 12 }
+        ];
+
+        let r = 1;
+
+        // ── 1. Title ──
+        ws.mergeCells(r, 1, r, 8);
+        const titleCell = ws.getCell(r, 1);
+        titleCell.value = 'FabricateIQ Quote';
+        titleCell.font = { bold: true, size: 18, color: { argb: C.primaryDark } };
+        titleCell.fill = fillSolid(C.lightGray);
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(r).height = 36;
+        r++;
+
+        // ── 2. Metadata ──
+        ws.getCell(r, 1).value = 'Generated';
+        ws.getCell(r, 1).font = { color: { argb: C.medGray } };
+        ws.getCell(r, 2).value = new Date().toLocaleDateString();
+        ws.getCell(r, 3).value = 'Currency';
+        ws.getCell(r, 3).font = { color: { argb: C.medGray } };
+        ws.getCell(r, 4).value = currency;
+        ws.getCell(r, 4).font = { bold: true };
+        ws.getCell(r, 5).value = 'Confidence';
+        ws.getCell(r, 5).font = { color: { argb: C.medGray } };
+        writeConfidence(ws.getCell(r, 6), aiQuote.confidence);
+        r++;
+
+        // Event/client name
+        if (displayEvent) {
+          ws.getCell(r, 1).value = displayEvent;
+          ws.getCell(r, 1).font = { italic: true, size: 11, color: { argb: C.medGray } };
+          r++;
+        }
+
+        r++; // separator
+
+        // ── 3. Booth Specifications ──
+        writeSectionHeader(ws, r, 'BOOTH SPECIFICATIONS');
+        r++;
+        const specRows = [
+          ['Dimensions', displayDimensions],
+          ['Square Footage', specs.square_footage || (parseFloat(width) * parseFloat(length))],
+          ['Location', displayLocation],
+          ['Duration', displayDuration]
+        ];
+        specRows.forEach((spec, i) => {
+          ws.getCell(r, 1).value = spec[0];
+          ws.getCell(r, 1).font = { bold: true, size: 11 };
+          ws.getCell(r, 2).value = spec[1];
+          ws.getCell(r, 2).font = { size: 11 };
+          if (i % 2 === 0) {
+            ws.getCell(r, 1).fill = fillSolid(C.lightGray);
+            ws.getCell(r, 2).fill = fillSolid(C.lightGray);
+          }
+          applyGridBorders(ws.getRow(r), 2);
+          r++;
+        });
+
+        r++; // separator
+
+        // ── 4. Materials Breakdown ──
+        writeSectionHeader(ws, r, 'MATERIALS BREAKDOWN');
+        r++;
+
+        // Column headers
+        const matHeaders = ['Category', 'Amount', 'Item', 'Qty', 'Dimensions', 'Unit Price', 'Extended', 'Confidence'];
+        const matHeaderRow = r;
+        matHeaders.forEach((h, i) => {
+          const cell = ws.getCell(r, i + 1);
+          cell.value = h;
+          cell.font = { bold: true, size: 10, color: { argb: C.primaryDark } };
+          cell.fill = fillSolid(C.lightBlue);
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = { bottom: medBorder, top: thinBorder, left: thinBorder, right: thinBorder };
+        });
+        r++;
+
+        // Material categories
+        const matCats = [
+          { key: 'walls', label: 'Walls/Fabrication', liKey: 'walls_line_items' },
+          { key: 'flooring', label: 'Flooring', liKey: 'flooring_line_items' },
+          { key: 'graphics', label: 'Graphics', liKey: 'graphics_line_items' },
+          { key: 'av_lighting', label: 'AV/Lighting', liKey: 'av_lighting_line_items' },
+          { key: 'furniture', label: 'Furniture', liKey: 'furniture_line_items' },
+          { key: 'other', label: 'Other', liKey: 'other_line_items' }
+        ];
+
+        matCats.forEach(cat => {
+          const amt = aiQuote.materials?.[cat.key] || 0;
+          if (amt <= 0) return;
+
+          // Category row
+          const catRow = ws.getRow(r);
+          catRow.getCell(1).value = cat.label;
+          catRow.getCell(1).font = { bold: true, size: 11 };
+          catRow.getCell(2).value = amt;
+          catRow.getCell(2).numFmt = currFmt;
+          catRow.getCell(2).font = { bold: true, size: 11 };
+          catRow.getCell(2).alignment = { horizontal: 'right' };
+          for (let c = 1; c <= 8; c++) {
+            catRow.getCell(c).fill = fillSolid(C.lightBlue);
+            catRow.getCell(c).border = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+          }
+          r++;
+
+          // Line items
+          (aiQuote.materials?.[cat.liKey] || []).forEach(li => {
+            const liRow = ws.getRow(r);
+            liRow.getCell(3).value = li.item || '';
+            liRow.getCell(4).value = li.qty || '';
+            liRow.getCell(5).value = li.dimensions || '';
+            liRow.getCell(6).value = li.unit_price || '';  // string like "$68.75/sqft"
+            if (li.extended) {
+              liRow.getCell(7).value = parseFloat(li.extended) || 0;
+              liRow.getCell(7).numFmt = currFmt;
+              liRow.getCell(7).alignment = { horizontal: 'right' };
+            }
+            if (li.confidence) writeConfidence(liRow.getCell(8), li.confidence);
+            applyGridBorders(liRow, 8);
+            r++;
+          });
+        });
+
+        // Materials Subtotal
+        writeSubtotalRow(ws, r, 'Materials Subtotal', aiQuote.materials?.subtotal || 0);
+        r++;
+        r++; // separator
+
+        // ── 5. Services Breakdown ──
+        writeSectionHeader(ws, r, 'SERVICES BREAKDOWN');
+        r++;
+
+        // Services column headers
+        ['Service', 'Amount', 'Rate', 'Note/Detail'].forEach((h, i) => {
+          const cell = ws.getCell(r, i + 1);
+          cell.value = h;
+          cell.font = { bold: true, size: 10, color: { argb: C.primaryDark } };
+          cell.fill = fillSolid(C.lightBlue);
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = { bottom: medBorder, top: thinBorder, left: thinBorder, right: thinBorder };
+        });
+        r++;
+
+        // Service categories
+        const svcCats = [
+          { label: 'Design/PM', amtKey: 'design_pm', pctKey: 'design_pm_percent', noteKey: 'design_pm_note', liKey: null },
+          { label: 'Install/Dismantle', amtKey: 'install_dismantle', pctKey: 'install_dismantle_percent', noteKey: null, liKey: 'install_dismantle_line_items' },
+          { label: 'Logistics', amtKey: 'logistics', pctKey: 'logistics_percent', noteKey: null, liKey: 'logistics_line_items' },
+          { label: 'Storage', amtKey: 'storage', pctKey: null, noteKey: null, liKey: 'storage_line_items' }
+        ];
+
+        svcCats.forEach(svc => {
+          const amt = aiQuote.services?.[svc.amtKey] || 0;
+          if (amt <= 0) return;
+
+          const svcRow = ws.getRow(r);
+          svcRow.getCell(1).value = svc.label;
+          svcRow.getCell(1).font = { bold: true, size: 11 };
+          svcRow.getCell(2).value = amt;
+          svcRow.getCell(2).numFmt = currFmt;
+          svcRow.getCell(2).alignment = { horizontal: 'right' };
+          const pct = svc.pctKey ? aiQuote.services?.[svc.pctKey] : null;
+          if (pct) svcRow.getCell(3).value = `${pct}%`;
+          const note = svc.noteKey ? aiQuote.services?.[svc.noteKey] : null;
+          if (note) {
+            svcRow.getCell(4).value = note;
+            svcRow.getCell(4).font = { size: 10, color: { argb: C.medGray } };
+          }
+          applyGridBorders(svcRow, 4);
+          r++;
+
+          // Service line items (I&D, logistics, storage details)
+          if (svc.liKey) {
+            (aiQuote.services?.[svc.liKey] || []).forEach(li => {
+              const liRow = ws.getRow(r);
+              liRow.getCell(3).value = li.item || '';
+              liRow.getCell(4).value = li.qty || '';
+              if (li.dimensions) liRow.getCell(3).value = `${li.item || ''} (${li.dimensions})`;
+              if (li.extended) {
+                liRow.getCell(2).value = parseFloat(li.extended) || 0;
+                liRow.getCell(2).numFmt = currFmt;
+                liRow.getCell(2).alignment = { horizontal: 'right' };
+              }
+              applyGridBorders(liRow, 4);
+              r++;
+            });
+          }
+        });
+
+        // Services Subtotal
+        writeSubtotalRow(ws, r, 'Services Subtotal', aiQuote.services?.subtotal || 0);
+        r++;
+        r++; // separator
+
+        // ── 6. Totals section ──
+        if (aiQuote.contingency > 0) {
+          const row = ws.getRow(r);
+          row.getCell(1).value = 'Contingency';
+          row.getCell(1).font = { size: 11 };
+          row.getCell(2).value = aiQuote.contingency;
+          row.getCell(2).numFmt = currFmt;
+          row.getCell(2).alignment = { horizontal: 'right' };
+          applyGridBorders(row, 2);
+          r++;
+        }
+
+        // Subtotal before tax
+        const stRow = ws.getRow(r);
+        stRow.getCell(1).value = 'Subtotal before tax';
+        stRow.getCell(1).font = { bold: true, size: 11 };
+        stRow.getCell(2).value = aiQuote.subtotal_before_tax || 0;
+        stRow.getCell(2).numFmt = currFmt;
+        stRow.getCell(2).font = { bold: true, size: 11 };
+        stRow.getCell(2).alignment = { horizontal: 'right' };
+        for (let c = 1; c <= 8; c++) stRow.getCell(c).border = { top: thinBorder };
+        r++;
+
+        // Tax
+        const taxRow = ws.getRow(r);
+        taxRow.getCell(1).value = `Tax (${((aiQuote.tax_rate || 0) * 100).toFixed(2)}%)`;
+        taxRow.getCell(1).font = { size: 11 };
+        taxRow.getCell(2).value = aiQuote.tax_amount || 0;
+        taxRow.getCell(2).numFmt = currFmt;
+        taxRow.getCell(2).alignment = { horizontal: 'right' };
+        applyGridBorders(taxRow, 2);
+        r++;
+
+        // ── TOTAL row ──
+        const totalRow = ws.getRow(r);
+        totalRow.height = 35;
+        totalRow.getCell(1).value = 'TOTAL';
+        totalRow.getCell(1).font = { bold: true, size: 16, color: { argb: C.white } };
+        totalRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+        totalRow.getCell(2).value = aiQuote.total || 0;
+        totalRow.getCell(2).numFmt = currFmt;
+        totalRow.getCell(2).font = { bold: true, size: 16, color: { argb: C.white } };
+        totalRow.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
+        for (let c = 1; c <= 8; c++) {
+          totalRow.getCell(c).fill = fillSolid(C.darkBg);
+          totalRow.getCell(c).border = { top: { style: 'thick' }, bottom: { style: 'thick' }, left: { style: 'thick' }, right: { style: 'thick' } };
+        }
+        r++;
+
+        // ── 7. Notes ──
+        if (aiQuote.notes?.length > 0) {
+          r++; // separator
+          writeSectionHeader(ws, r, 'NOTES & ASSUMPTIONS');
+          // Override to yellow style
+          ws.getCell(r, 1).font = { bold: true, size: 11, color: { argb: C.yellowText } };
+          ws.getCell(r, 1).fill = fillSolid(C.yellowBg);
+          r++;
+
+          aiQuote.notes.forEach(note => {
+            ws.mergeCells(r, 1, r, 8);
+            const noteCell = ws.getCell(r, 1);
+            noteCell.value = `• ${note}`;
+            noteCell.font = { size: 10, italic: true, color: { argb: C.yellowText } };
+            noteCell.fill = fillSolid(C.yellowBg);
+            noteCell.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+            noteCell.border = { bottom: thinBorder };
+            ws.getRow(r).height = 22;
+            r++;
+          });
+        }
+
+        // ── Freeze panes & print ──
+        ws.views = [{ state: 'frozen', ySplit: matHeaderRow, xSplit: 0 }];
+        ws.pageSetup.printArea = `A1:H${r - 1}`;
+
+        // ── Generate and download ──
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `fabricateiq-quote-${new Date().toISOString().split('T')[0]}.xlsx`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+      };
+
+      return (
+        <div className="container">
+          {/* Header */}
+          <div className="header">
+            <h1>FabricateIQ</h1>
+            <p>Professional booth estimation powered by AI</p>
+          </div>
+
+          {error && <div className="error-banner">{error}</div>}
+
+          {/* Input Card */}
+          <div className="card">
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Location</label>
+                <select value={location} onChange={(e) => setLocation(e.target.value)}>
+                  <option value="toronto">Toronto</option>
+                  <option value="montreal">Montreal</option>
+                  <option value="usa">USA</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Environment</label>
+                <div className="segment-control">
+                  <button
+                    className={`segment-btn ${indoor ? 'active' : ''}`}
+                    onClick={() => setIndoor(true)}
+                    disabled={!!uploadedPDF}
+                  >
+                    Indoor
+                  </button>
+                  <button
+                    className={`segment-btn ${!indoor ? 'active' : ''}`}
+                    onClick={() => setIndoor(false)}
+                    disabled={!!uploadedPDF}
+                  >
+                    Outdoor
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 24 }}>
+              <label className="form-label">Booth Dimensions (feet)</label>
+              <div className="dimensions-grid">
+                <input
+                  type="number"
+                  value={width}
+                  onChange={(e) => setWidth(e.target.value)}
+                  min="1"
+                  step="0.5"
+                  placeholder="Width"
+                  disabled={!!uploadedPDF}
+                />
+                <span className="dimensions-x">×</span>
+                <input
+                  type="number"
+                  value={length}
+                  onChange={(e) => setLength(e.target.value)}
+                  min="1"
+                  step="0.5"
+                  placeholder="Length"
+                  disabled={!!uploadedPDF}
+                />
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 24 }}>
+              <label className="form-label">Duration</label>
+              <div className="duration-pills">
+                {DURATION_OPTIONS.map((day) => (
+                  <button
+                    key={day}
+                    className={`pill-btn ${duration === day ? 'active' : ''}`}
+                    onClick={() => setDuration(day)}
+                  >
+                    {day} day{day !== 1 ? 's' : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 24 }}>
+              <label className="form-label">Ground Level</label>
+              <div className="segment-control">
+                <button
+                  className={`segment-btn ${groundLevel === 'yes' ? 'active' : ''}`}
+                  onClick={() => setGroundLevel('yes')}
+                >
+                  Yes
+                </button>
+                <button
+                  className={`segment-btn ${groundLevel === 'not-sure' ? 'active' : ''}`}
+                  onClick={() => setGroundLevel('not-sure')}
+                >
+                  Not Sure
+                </button>
+                <button
+                  className={`segment-btn ${groundLevel === 'no' ? 'active' : ''}`}
+                  onClick={() => setGroundLevel('no')}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 32 }}>
+              <label className="form-label">Upload (Optional)</label>
+              <div
+                className={`upload-zone ${dragging ? 'dragging' : ''}`}
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragging(false);
+                  if (e.dataTransfer.files[0]) handleFileUpload(e.dataTransfer.files[0]);
+                }}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => e.target.files[0] && handleFileUpload(e.target.files[0])}
+                  style={{ display: 'none' }}
+                />
+                {analyzing ? (
+                  <div className="loading-state">
+                    <div className="spinner"></div>
+                    <p className="loading-text">Analyzing file...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="upload-icon">📄</div>
+                    <p>Drop rendering or PDF here</p>
+                    <p>or click to browse</p>
+                  </>
+                )}
+              </div>
+
+              {uploadedImage && (
+                <img src={uploadedImage} alt="Booth rendering" className="preview-img" />
+              )}
+
+              {uploadedPDF && (
+                <div className="pdf-badge">
+                  📄 {uploadedPDF}
+                  <button
+                    className="clear-pdf-btn"
+                    onClick={(e) => { e.stopPropagation(); setUploadedPDF(null); setPdfText(''); }}
+                    title="Clear PDF and edit manually"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Primary CTA */}
+          <button
+            className="btn-primary"
+            onClick={getAIQuote}
+            disabled={loadingAiQuote}
+            style={{ marginBottom: 24 }}
+          >
+            {loadingAiQuote ? 'Generating Quote...' : 'Generate AI Quote'}
+          </button>
+
+          {/* AI Quote Result */}
+          {loadingAiQuote && (
+            <div className="card">
+              <div className="loading-state">
+                <div className="spinner"></div>
+                <p className="loading-text">AI is analyzing your specifications...</p>
+              </div>
+            </div>
+          )}
+
+          {aiQuote && !loadingAiQuote && (
+            <div className="card">
+              <div className="quote-result">
+                <span className="quote-badge ai">AI-Powered Quote</span>
+                <div className="quote-total">{formatCurrency(aiQuote.total)}</div>
+                <div className="quote-label">
+                  Estimated total including {((aiQuote.tax_rate || 0) * 100).toFixed(1)}% tax
+                </div>
+                <span className={`confidence-badge ${aiQuote.confidence || 'medium'}`}>
+                  {aiQuote.confidence === 'high' ? '✓' : aiQuote.confidence === 'low' ? '!' : '~'}
+                  {' '}{(aiQuote.confidence || 'medium').charAt(0).toUpperCase() + (aiQuote.confidence || 'medium').slice(1)} Confidence
+                </span>
+              </div>
+
+              <div className="breakdown-section">
+                <div className="breakdown-grid">
+                  <div className="breakdown-card">
+                    <div className="breakdown-title">Materials</div>
+                    {aiQuote.materials?.walls > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Walls/Fabrication</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.walls)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.materials.walls_line_items} label="wall" />
+                      </div>
+                    )}
+                    {aiQuote.materials?.flooring > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Flooring</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.flooring)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.materials.flooring_line_items} label="flooring" />
+                      </div>
+                    )}
+                    {aiQuote.materials?.graphics > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Graphics</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.graphics)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.materials.graphics_line_items} label="graphics" />
+                      </div>
+                    )}
+                    {aiQuote.materials?.av_lighting > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">AV & Lighting</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.av_lighting)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.materials.av_lighting_line_items} label="av" />
+                      </div>
+                    )}
+                    {aiQuote.materials?.furniture > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Furniture</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.furniture)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.materials.furniture_line_items} label="furniture" />
+                      </div>
+                    )}
+                    {aiQuote.materials?.other > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Other</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.other)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.materials.other_line_items} label="other" />
+                      </div>
+                    )}
+                    <div className="breakdown-item breakdown-subtotal">
+                      <span className="breakdown-item-label">Subtotal</span>
+                      <span className="breakdown-item-value">{formatCurrency(aiQuote.materials?.subtotal)}</span>
+                    </div>
+                  </div>
+
+                  <div className="breakdown-card">
+                    <div className="breakdown-title">Services</div>
+                    {aiQuote.services?.design_pm > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Design & PM {aiQuote.services.design_pm_percent ? `(${aiQuote.services.design_pm_percent}%)` : ''}</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.services.design_pm)}</span>
+                        </div>
+                        {aiQuote.services.design_pm_note && (
+                          <div className="service-note">{aiQuote.services.design_pm_note}</div>
+                        )}
+                      </div>
+                    )}
+                    {aiQuote.services?.install_dismantle > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Install & Dismantle {aiQuote.services.install_dismantle_percent ? `(${aiQuote.services.install_dismantle_percent}%)` : ''}</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.services.install_dismantle)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.services.install_dismantle_line_items} label="I&D" />
+                      </div>
+                    )}
+                    {aiQuote.services?.logistics > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Logistics {aiQuote.services.logistics_percent ? `(${aiQuote.services.logistics_percent}%)` : ''}</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.services.logistics)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.services.logistics_line_items} label="logistics" />
+                      </div>
+                    )}
+                    {aiQuote.services?.storage > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Storage</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.services.storage)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.services.storage_line_items} label="storage" />
+                      </div>
+                    )}
+                    <div className="breakdown-item breakdown-subtotal">
+                      <span className="breakdown-item-label">Subtotal</span>
+                      <span className="breakdown-item-value">{formatCurrency(aiQuote.services?.subtotal)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 24 }}>
+                  {aiQuote.contingency > 0 && (
+                    <div className="summary-row">
+                      <span>Contingency</span>
+                      <span>{formatCurrency(aiQuote.contingency)}</span>
+                    </div>
+                  )}
+                  <div className="summary-row">
+                    <span>Subtotal</span>
+                    <span>{formatCurrency(aiQuote.subtotal_before_tax)}</span>
+                  </div>
+                  <div className="summary-row">
+                    <span>Tax ({((aiQuote.tax_rate || 0) * 100).toFixed(2)}%)</span>
+                    <span>{formatCurrency(aiQuote.tax_amount)}</span>
+                  </div>
+                  <div className="summary-row total">
+                    <span>Total</span>
+                    <span>{formatCurrency(aiQuote.total)}</span>
+                  </div>
+                </div>
+
+                {aiQuote.notes && aiQuote.notes.length > 0 && (
+                  <div className="notes-section">
+                    <div className="notes-title">Notes & Assumptions</div>
+                    <ul className="notes-list">
+                      {aiQuote.notes.map((note, i) => <li key={i}>{note}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <button className="btn-secondary" onClick={downloadQuote} style={{ marginTop: 24 }}>
+                Download Excel (.xlsx)
+              </button>
+            </div>
+          )}
+
+          {/* Template Estimates (Collapsible) */}
+          {estimates && (
+            <div className="card">
+              <div className="collapsible-header" onClick={() => setShowTemplates(!showTemplates)}>
+                <h3>Quick Estimates</h3>
+                <span className={`collapsible-toggle ${showTemplates ? 'open' : ''}`}>▼</span>
+              </div>
+              <div className={`collapsible-content ${showTemplates ? 'open' : ''}`}>
+                <div className="template-estimates">
+                  <div className="template-card budget">
+                    <div className="template-tier">Budget</div>
+                    <div className="template-total">{formatCurrency(estimates.aggressive.total)}</div>
+                  </div>
+                  <div className="template-card standard">
+                    <div className="template-tier">Standard</div>
+                    <div className="template-total">{formatCurrency(estimates.middle.total)}</div>
+                  </div>
+                  <div className="template-card premium">
+                    <div className="template-tier">Premium</div>
+                    <div className="template-total">{formatCurrency(estimates.conservative.total)}</div>
+                  </div>
+                </div>
+                <p style={{ fontSize: 13, color: '#86868b', textAlign: 'center' }}>
+                  Template-based estimates. Use AI Quote for detailed, calibrated pricing.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── Floating Chat Trigger ── */}
+          {aiQuote && !showChat && (
+            <button className="chat-fab" onClick={() => setShowChat(true)}>
+              💬 Adjust Quote
+            </button>
+          )}
+
+          {/* ── Chat Backdrop ── */}
+          <div
+            className={`chat-backdrop ${showChat ? 'visible' : ''}`}
+            onClick={() => setShowChat(false)}
+          />
+
+          {/* ── Chat Slide-out Panel ── */}
+          <div className={`chat-panel ${showChat ? 'open' : ''}`}>
+            <div className="chat-header">
+              <div className="chat-header-left">
+                <span className="chat-header-title">Adjust Your Quote</span>
+                <span className="chat-version-badge">v{quoteVersions.length}</span>
+              </div>
+              <button className="chat-close-btn" onClick={() => setShowChat(false)} title="Close">✕</button>
+            </div>
+
+            <div className="chat-messages">
+              {/* Welcome message */}
+              <div className="chat-welcome">
+                <div className="chat-welcome-title">Your quote is ready. Ask me to adjust it:</div>
+                <ul>
+                  <li>"Swap the G-Floor for carpet"</li>
+                  <li>"Add 2 more lightboxes"</li>
+                  <li>"What if we use AGAM walls instead of MDF?"</li>
+                  <li>"Remove the AV package"</li>
+                  <li>"What's the total if we go to Montreal?"</li>
+                </ul>
+              </div>
+
+              {/* Chat messages */}
+              {chatMessages.map((msg, i) => (
+                msg.role === 'user' ? (
+                  <div key={i} className="chat-bubble chat-bubble-user">{msg.content}</div>
+                ) : (
+                  <div key={i} className={`chat-bubble chat-bubble-assistant${msg.whatIf ? ' what-if' : ''}`}>
+                    {msg.content}
+                    {!msg.applied && msg.whatIf && msg.updatedQuote && (
+                      <div className="chat-whatif-actions">
+                        <button className="chat-btn-apply" onClick={() => applyWhatIf(i)}>Apply this change</button>
+                        <button className="chat-btn-keep" onClick={() => {
+                          setChatMessages(prev => prev.map((m, idx) =>
+                            idx === i ? { ...m, whatIf: false, dismissed: true } : m
+                          ));
+                        }}>Keep current</button>
+                      </div>
+                    )}
+                    {msg.updatedQuote && !msg.whatIf && !msg.dismissed && (
+                      <div className="chat-applied-badge">Changes applied</div>
+                    )}
+                  </div>
+                )
+              ))}
+
+              {/* Typing indicator */}
+              {chatLoading && (
+                <div className="chat-typing">
+                  <div className="chat-typing-dot"></div>
+                  <div className="chat-typing-dot"></div>
+                  <div className="chat-typing-dot"></div>
+                </div>
+              )}
+
+              <div ref={chatEndRef} />
+            </div>
+
+            <div className="chat-input-area">
+              <input
+                className="chat-input"
+                type="text"
+                placeholder="Ask to adjust your quote..."
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
+                disabled={chatLoading}
+              />
+              <button
+                className="chat-send-btn"
+                onClick={sendChatMessage}
+                disabled={chatLoading || !chatInput.trim()}
+              >
+                {chatLoading ? '...' : 'Send'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<FabricateIQ />, document.getElementById('root'));
+  </script>
+</body>
+</html>

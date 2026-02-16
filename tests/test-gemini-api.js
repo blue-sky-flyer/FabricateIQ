@@ -6,11 +6,12 @@
  * and returns accurate quotes within acceptable variance.
  *
  * Usage:
- *   node tests/test-gemini-api.js
+ *   GEMINI_WORKER_URL=https://... WORKER_AUTH_TOKEN=... node tests/test-gemini-api.js
  *   node tests/test-gemini-api.js --verbose
  */
 
-const GEMINI_WORKER_URL = 'https://boothiq-gemini.raj-lucia001.workers.dev';
+const GEMINI_WORKER_URL = process.env.GEMINI_WORKER_URL || 'https://fabricateiq-gemini.raj-lucia001.workers.dev';
+const WORKER_AUTH_TOKEN = process.env.WORKER_AUTH_TOKEN || '';
 const VERBOSE = process.argv.includes('--verbose');
 
 // Test cases with expected booth specs and totals
@@ -98,13 +99,18 @@ Instructions:
 
 Do NOT invent prices - use the actual line item costs from the document.`;
 
+  const headers = { 'Content-Type': 'application/json' };
+  if (WORKER_AUTH_TOKEN) {
+    headers['Authorization'] = `Bearer ${WORKER_AUTH_TOKEN}`;
+  }
+
   try {
     const response = await fetch(GEMINI_WORKER_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         messages: [{ role: 'user', content: prompt }],
-        model: 'gemini-3-pro-preview'
+        model: 'gemini-3-pro'
       })
     });
 
@@ -169,7 +175,8 @@ function validateQuote(quote, expected, testName) {
 async function runTests() {
   console.log('FabricateIQ Gemini API Test Suite');
   console.log('=' .repeat(50));
-  console.log(`Testing: ${GEMINI_WORKER_URL}\n`);
+  console.log(`Testing: ${GEMINI_WORKER_URL}`);
+  console.log(`Auth: ${WORKER_AUTH_TOKEN ? 'Bearer token provided' : 'No auth token (set WORKER_AUTH_TOKEN)'}\n`);
 
   let passed = 0;
   let failed = 0;
