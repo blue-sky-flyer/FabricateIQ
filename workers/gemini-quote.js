@@ -1,8 +1,8 @@
 // Cloudflare Worker - FabricateIQ Gemini proxy (deployed as boothiq-gemini)
 // Routes Gemini API calls through secure proxy with SKILL.md system prompt
 
-const SKILL_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/boothiq1/main/skills/quote-generator/SKILL.md';
-const CATALOG_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/boothiq1/main/MASTER_CATALOG.md';
+const SKILL_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/main/skills/quote-generator/SKILL.md';
+const CATALOG_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/main/MASTER_CATALOG.md';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
