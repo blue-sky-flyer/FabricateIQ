@@ -1,4 +1,4 @@
-name = "boothiq-proxy"
+name = "fabricateiq-proxy"
 main = "workers/quote.js"
 compatibility_date = "2024-01-01"
 

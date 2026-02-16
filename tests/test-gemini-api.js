@@ -10,7 +10,7 @@
  *   node tests/test-gemini-api.js --verbose
  */
 
-const GEMINI_WORKER_URL = 'https://boothiq-gemini.raj-lucia001.workers.dev';
+const GEMINI_WORKER_URL = 'https://fabricateiq-gemini.raj-lucia001.workers.dev';
 const VERBOSE = process.argv.includes('--verbose');
 
 // Test cases with expected booth specs and totals

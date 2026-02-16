@@ -1,4 +1,4 @@
-// Cloudflare Worker - FabricateIQ Gemini proxy (deployed as boothiq-gemini)
+// Cloudflare Worker - FabricateIQ Gemini proxy (fabricateiq-gemini)
 // Routes Gemini API calls through secure proxy with SKILL.md system prompt
 
 const SKILL_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/main/skills/quote-generator/SKILL.md';

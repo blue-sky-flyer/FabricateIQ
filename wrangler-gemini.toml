@@ -1,4 +1,4 @@
-name = "boothiq-gemini"
+name = "fabricateiq-gemini"
 main = "workers/gemini-quote.js"
 compatibility_date = "2024-01-01"
 
