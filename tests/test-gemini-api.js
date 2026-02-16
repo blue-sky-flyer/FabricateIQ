@@ -167,7 +167,7 @@ function validateQuote(quote, expected, testName) {
 }
 
 async function runTests() {
-  console.log('BoothIQ Gemini API Test Suite');
+  console.log('FabricateIQ Gemini API Test Suite');
   console.log('=' .repeat(50));
   console.log(`Testing: ${GEMINI_WORKER_URL}\n`);
 

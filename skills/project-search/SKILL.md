@@ -5,7 +5,7 @@ description: Search historical booth projects by client, type, size, or specific
 
 # Project Search
 
-Find relevant historical projects from the BoothIQ knowledge base.
+Find relevant historical projects from the FabricateIQ knowledge base.
 
 ## Project Index
 

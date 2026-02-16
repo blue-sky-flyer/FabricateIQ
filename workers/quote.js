@@ -1,4 +1,4 @@
-// Cloudflare Worker - boothiq-proxy
+// Cloudflare Worker - FabricateIQ Claude proxy (deployed as boothiq-proxy)
 // Routes Claude API calls through secure proxy with SKILL.md system prompt
 
 const SKILL_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/boothiq1/main/skills/quote-generator/SKILL.md';

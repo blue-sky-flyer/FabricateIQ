@@ -5,7 +5,7 @@ description: Query booth component pricing from knowledge base. Use when looking
 
 # Catalog Query
 
-Retrieve accurate pricing data from the BoothIQ knowledge base.
+Retrieve accurate pricing data from the FabricateIQ knowledge base.
 
 ## Knowledge Base Files
 

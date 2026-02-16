@@ -242,7 +242,7 @@ USE THESE RATES EXACTLY - they include all overhead, tools, insurance, and are m
 ## Output Format Template
 
 ```markdown
-# BoothIQ Quote Estimate
+# FabricateIQ Quote Estimate
 
 **Project:** [Description]
 **Booth:** [W]' x [D]' ([sqft] sq ft)
