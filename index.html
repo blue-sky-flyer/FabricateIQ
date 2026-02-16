@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BoothIQ - Professional Booth Estimation</title>
+  <title>FabricateIQ - Professional Booth Estimation</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎪</text></svg>">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="lib/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <style>
     /* Apple-inspired design system */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -144,6 +145,18 @@
       background: #ffffff;
       color: #1d1d1f;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Disabled state for form controls (when PDF uploaded) */
+    input:disabled, select:disabled, button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .segment-btn:disabled, .pill-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
     }
 
     /* Duration pills */
@@ -447,6 +460,86 @@
       margin-bottom: 6px;
     }
 
+    /* Line item detail rows */
+    .line-items-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 0;
+      font-size: 12px;
+      color: #0071e3;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: inherit;
+    }
+
+    .line-items-toggle:hover {
+      color: #0077ed;
+    }
+
+    .line-items-toggle .arrow {
+      font-size: 10px;
+      transition: transform 0.2s ease;
+    }
+
+    .line-items-toggle .arrow.open {
+      transform: rotate(90deg);
+    }
+
+    .line-items-table {
+      width: 100%;
+      font-size: 12px;
+      border-collapse: collapse;
+      margin: 8px 0 12px 0;
+    }
+
+    .line-items-table th {
+      text-align: left;
+      padding: 6px 8px;
+      font-weight: 600;
+      color: #86868b;
+      border-bottom: 1px solid #e8e8ed;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .line-items-table th:last-child {
+      text-align: right;
+    }
+
+    .line-items-table td {
+      padding: 5px 8px;
+      color: #1d1d1f;
+      border-bottom: 1px solid #f0f0f2;
+    }
+
+    .line-items-table td:last-child {
+      text-align: right;
+      font-weight: 500;
+    }
+
+    .line-items-table .conf-badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .line-items-table .conf-badge.high { background: rgba(52,199,89,0.12); color: #248a3d; }
+    .line-items-table .conf-badge.medium { background: rgba(255,159,10,0.12); color: #b25000; }
+    .line-items-table .conf-badge.low { background: rgba(255,59,48,0.12); color: #d70015; }
+
+    .service-note {
+      font-size: 12px;
+      color: #86868b;
+      font-style: italic;
+      padding: 2px 0 4px 0;
+    }
+
     /* Collapsible section */
     .collapsible-header {
       display: flex;
@@ -584,6 +677,23 @@
       margin-top: 16px;
     }
 
+    .clear-pdf-btn {
+      background: none;
+      border: none;
+      color: #86868b;
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 14px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      margin-left: 4px;
+    }
+
+    .clear-pdf-btn:hover {
+      background: #e8e8ed;
+      color: #1d1d1f;
+    }
+
     /* Empty state */
     .empty-state {
       text-align: center;
@@ -595,6 +705,320 @@
       font-size: 64px;
       margin-bottom: 16px;
       opacity: 0.5;
+    }
+
+    /* ── Chat Panel (right-side slide-out) ── */
+    .chat-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.15);
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .chat-backdrop.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .chat-panel {
+      position: fixed;
+      right: 0;
+      top: 0;
+      height: 100vh;
+      width: max(400px, 30vw);
+      max-width: 480px;
+      background: #ffffff;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+    }
+
+    .chat-panel.open {
+      transform: translateX(0);
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      border-bottom: 1px solid #f0f0f0;
+      flex-shrink: 0;
+    }
+
+    .chat-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chat-header-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    .chat-version-badge {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #5e5ce6 0%, #bf5af2 100%);
+      color: white;
+    }
+
+    .chat-close-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: #f5f5f7;
+      color: #86868b;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .chat-close-btn:hover {
+      background: #e8e8ed;
+      color: #1d1d1f;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Floating chat trigger button */
+    .chat-fab {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 998;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 24px;
+      background: linear-gradient(135deg, #5e5ce6 0%, #bf5af2 100%);
+      color: white;
+      border: none;
+      border-radius: 980px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(94,92,230,0.4);
+      transition: all 0.2s ease;
+    }
+
+    .chat-fab:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(94,92,230,0.5);
+    }
+
+    .chat-fab:active {
+      transform: scale(0.97);
+    }
+
+    @media (max-width: 768px) {
+      .chat-panel {
+        width: 100vw;
+        max-width: 100vw;
+      }
+    }
+
+    .chat-welcome {
+      background: #f5f5f7;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 14px;
+      color: #1d1d1f;
+      line-height: 1.5;
+    }
+
+    .chat-welcome-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .chat-welcome ul {
+      margin: 8px 0 0 0;
+      padding-left: 20px;
+      color: #515154;
+    }
+
+    .chat-welcome li {
+      margin-bottom: 4px;
+      font-style: italic;
+    }
+
+    .chat-bubble {
+      max-width: 85%;
+      padding: 10px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+
+    .chat-bubble-user {
+      align-self: flex-end;
+      background: #0071e3;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-bubble-assistant {
+      align-self: flex-start;
+      background: #f0f0f5;
+      color: #1d1d1f;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-bubble-assistant.what-if {
+      border-left: 3px solid #bf5af2;
+    }
+
+    .chat-applied-badge {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 8px;
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .chat-whatif-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .chat-whatif-actions button {
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .chat-btn-apply {
+      background: #0071e3;
+      color: white;
+    }
+
+    .chat-btn-apply:hover {
+      background: #0077ed;
+    }
+
+    .chat-btn-keep {
+      background: #e8e8ed;
+      color: #1d1d1f;
+    }
+
+    .chat-btn-keep:hover {
+      background: #d2d2d7;
+    }
+
+    .chat-typing {
+      align-self: flex-start;
+      padding: 12px 16px;
+      background: #f0f0f5;
+      border-radius: 16px;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .chat-typing-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #86868b;
+      animation: chatDotPulse 1.4s ease-in-out infinite;
+    }
+
+    .chat-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .chat-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes chatDotPulse {
+      0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+      30% { opacity: 1; transform: scale(1); }
+    }
+
+    .chat-input-area {
+      display: flex;
+      gap: 8px;
+      padding: 12px 24px 16px;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 10px 16px;
+      border: 1px solid #d2d2d7;
+      border-radius: 12px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .chat-input:focus {
+      border-color: #0071e3;
+    }
+
+    .chat-input:disabled {
+      background: #f5f5f7;
+      color: #86868b;
+    }
+
+    .chat-send-btn {
+      padding: 10px 20px;
+      background: #0071e3;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .chat-send-btn:hover {
+      background: #0077ed;
+    }
+
+    .chat-send-btn:disabled {
+      background: #d2d2d7;
+      cursor: not-allowed;
+    }
+
+    .chat-error-badge {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 11px;
+      color: #d32f2f;
+      font-style: italic;
     }
 
     /* Responsive */
@@ -639,7 +1063,48 @@
       }
     };
 
-    function BoothIQ() {
+    // Line item detail component
+    function LineItemDetail({ lineItems, label, currency }) {
+      const [open, setOpen] = React.useState(false);
+      if (!lineItems || lineItems.length === 0) return null;
+
+      return (
+        <div>
+          <button className="line-items-toggle" onClick={() => setOpen(!open)}>
+            <span className={`arrow ${open ? 'open' : ''}`}>&#9654;</span>
+            {open ? 'Hide' : 'Show'} {lineItems.length} line item{lineItems.length !== 1 ? 's' : ''}
+          </button>
+          {open && (
+            <table className="line-items-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Qty</th>
+                  <th>Dimensions</th>
+                  <th>Unit Price</th>
+                  <th>Conf</th>
+                  <th>Extended</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lineItems.map((li, i) => (
+                  <tr key={i}>
+                    <td>{li.item}</td>
+                    <td>{li.qty || ''}</td>
+                    <td>{li.dimensions || ''}</td>
+                    <td>{li.unit_price || ''}</td>
+                    <td>{li.confidence ? <span className={`conf-badge ${li.confidence}`}>{li.confidence}</span> : ''}</td>
+                    <td>{new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'CAD', currencyDisplay: 'code', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(li.extended || 0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      );
+    }
+
+    function FabricateIQ() {
       const [location, setLocation] = React.useState('toronto');
       const [width, setWidth] = React.useState(10);
       const [length, setLength] = React.useState(10);
@@ -658,6 +1123,14 @@
       const [aiQuote, setAiQuote] = React.useState(null);
       const [loadingAiQuote, setLoadingAiQuote] = React.useState(false);
       const [showTemplates, setShowTemplates] = React.useState(false);
+
+      // Chat state
+      const [showChat, setShowChat] = React.useState(false);
+      const [chatMessages, setChatMessages] = React.useState([]);
+      const [chatInput, setChatInput] = React.useState('');
+      const [chatLoading, setChatLoading] = React.useState(false);
+      const [quoteVersions, setQuoteVersions] = React.useState([]);
+      const chatEndRef = React.useRef(null);
 
       const calculateBoothSpecs = () => {
         const w = parseFloat(width) || 0;
@@ -861,29 +1334,49 @@
         setAiQuote(null);
 
         try {
-          const specs = {
-            width: parseFloat(width) || 10,
-            length: parseFloat(length) || 10,
-            location: location,
-            environment: indoor ? 'indoor' : 'outdoor',
-            duration: duration,
-            groundLevel: groundLevel,
-            uploadedPdf: uploadedPDF || null,
-            pdfContent: pdfText || null
-          };
+          let promptText;
 
-          let promptText = `Generate a detailed booth quote for:
+          if (pdfText) {
+            // PDF uploaded - base quote on LINE ITEMS from the PDF
+            promptText = `Generate a booth quote based PRIMARILY on the LINE ITEMS in this PDF document.
+
+CRITICAL: The line items (individual costs for materials, labor, services) in the PDF are the PRIMARY source for this quote. Sum them up and categorize them appropriately.
+
+PDF CONTENT:
+${pdfText.substring(0, 6000)}
+
+Instructions:
+1. EXTRACT ALL LINE ITEMS from the PDF - these are your primary pricing data
+2. Sum line items into categories:
+   - Materials: walls/fabrication, flooring, graphics, AV/lighting, furniture, rentals
+   - Services: design/PM, install/dismantle, labor, logistics/shipping/drayage
+3. Extract booth dimensions and location if mentioned
+4. Apply appropriate tax rate based on location (13% Ontario HST, 14.975% Quebec GST+QST)
+5. The TOTAL should closely match the sum of line items from the PDF (plus tax if not included)
+
+Do NOT invent prices - use the actual line item costs from the PDF.
+Use the calibrated service ratios from SKILL.md only if specific service costs are not itemized in the PDF.`;
+          } else {
+            // Manual entry - use form values
+            const specs = {
+              width: parseFloat(width) || 10,
+              length: parseFloat(length) || 10,
+              location: location,
+              environment: indoor ? 'indoor' : 'outdoor',
+              duration: duration,
+              groundLevel: groundLevel
+            };
+
+            promptText = `Generate a detailed booth quote for:
 - Dimensions: ${specs.width}ft × ${specs.length}ft (${specs.width * specs.length} sq ft)
 - Location: ${specs.location}
+- Currency: ${getCurrency()}
 - Environment: ${specs.environment}
 - Duration: ${specs.duration} days
-- Ground Level: ${specs.groundLevel === 'yes' ? 'Yes (level floor)' : specs.groundLevel === 'no' ? 'No (uneven, requires leveling)' : 'Unknown'}`;
+- Ground Level: ${specs.groundLevel === 'yes' ? 'Yes (level floor)' : specs.groundLevel === 'no' ? 'No (uneven, requires leveling)' : 'Unknown'}
 
-          if (specs.pdfContent) {
-            promptText += `\n\nAdditional context from uploaded PDF:\n${specs.pdfContent.substring(0, 2000)}`;
+Provide a complete quote with materials breakdown, services (design/PM, install/dismantle, logistics), tax, and total. Use the calibrated service ratios from the SKILL.md for this project type.`;
           }
-
-          promptText += `\n\nProvide a complete quote with materials breakdown, services (design/PM, install/dismantle, logistics), tax, and total. Use the calibrated service ratios from the SKILL.md for this project type.`;
 
           const response = await fetch(GEMINI_WORKER_URL, {
             method: 'POST',
@@ -902,6 +1395,9 @@
           const data = await response.json();
           console.log('Gemini AI Quote:', JSON.stringify(data, null, 2));
           setAiQuote(data.quote);
+          setQuoteVersions([{ quote: data.quote, label: 'Original' }]);
+          setChatMessages([]);
+          setChatInput('');
 
         } catch (err) {
           console.error('AI Quote error:', err);
@@ -910,6 +1406,88 @@
           setLoadingAiQuote(false);
         }
       };
+
+      // ── Chat: send adjustment message ──
+      const sendChatMessage = async () => {
+        const msg = chatInput.trim();
+        if (!msg || chatLoading) return;
+
+        const userMsg = { role: 'user', content: msg, timestamp: Date.now() };
+        setChatMessages(prev => [...prev, userMsg]);
+        setChatInput('');
+        setChatLoading(true);
+
+        try {
+          const response = await fetch(GEMINI_WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              mode: 'chat',
+              currentQuote: aiQuote,
+              message: msg,
+              conversationHistory: chatMessages.slice(-10),
+              model: 'gemini-3-pro-preview'
+            })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Chat request failed');
+          }
+
+          const data = await response.json();
+
+          const assistantMsg = {
+            role: 'assistant',
+            content: data.response,
+            whatIf: data.whatIf || false,
+            updatedQuote: data.updatedQuote,
+            timestamp: Date.now()
+          };
+          setChatMessages(prev => [...prev, assistantMsg]);
+
+          // Auto-apply unless it's a "what if"
+          if (!data.whatIf && data.updatedQuote) {
+            setAiQuote(data.updatedQuote);
+            setQuoteVersions(prev => [...prev, {
+              quote: data.updatedQuote,
+              label: data.changesSummary || msg.substring(0, 50)
+            }]);
+          }
+        } catch (err) {
+          console.error('Chat error:', err);
+          setChatMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'Sorry, I had trouble processing that. Please try again.',
+            timestamp: Date.now()
+          }]);
+        } finally {
+          setChatLoading(false);
+        }
+      };
+
+      // ── Chat: apply a "what if" quote ──
+      const applyWhatIf = (msgIndex) => {
+        const msg = chatMessages[msgIndex];
+        if (msg && msg.updatedQuote) {
+          setAiQuote(msg.updatedQuote);
+          setQuoteVersions(prev => [...prev, {
+            quote: msg.updatedQuote,
+            label: 'Applied what-if change'
+          }]);
+          // Mark as applied in chat
+          setChatMessages(prev => prev.map((m, i) =>
+            i === msgIndex ? { ...m, whatIf: false, applied: true } : m
+          ));
+        }
+      };
+
+      // Auto-scroll chat to bottom
+      React.useEffect(() => {
+        if (chatEndRef.current) {
+          chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, [chatMessages, chatLoading]);
 
       // Resize image if too large for Claude API (5MB limit)
       const resizeImageIfNeeded = async (file, maxSizeBytes = 4.5 * 1024 * 1024) => {
@@ -1004,76 +1582,378 @@
         }
       };
 
+      const getCurrency = () => location === 'usa' ? 'USD' : 'CAD';
+
       const formatCurrency = (value) => {
         return new Intl.NumberFormat('en-US', {
           style: 'currency',
-          currency: 'USD',
+          currency: getCurrency(),
+          currencyDisplay: 'code',
           minimumFractionDigits: 0,
           maximumFractionDigits: 0
         }).format(value || 0);
       };
 
-      const downloadQuote = () => {
+      const downloadQuote = async () => {
         if (!aiQuote) return;
 
-        const quoteHTML = `<!DOCTYPE html><html><head><style>
-          body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; color: #1d1d1f; }
-          .header { text-align: center; margin-bottom: 40px; }
-          .header h1 { font-size: 32px; margin: 0 0 8px 0; }
-          .header p { color: #86868b; margin: 0; }
-          .specs { background: #f5f5f7; padding: 20px; border-radius: 12px; margin: 24px 0; }
-          .total-section { text-align: center; padding: 32px; background: #f5f5f7; border-radius: 12px; margin: 24px 0; }
-          .total-amount { font-size: 48px; font-weight: 600; }
-          .section { margin: 24px 0; }
-          .section h3 { font-size: 14px; color: #86868b; text-transform: uppercase; margin-bottom: 12px; }
-          .line-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e8e8ed; }
-        </style></head><body>
-          <div class="header">
-            <h1>BoothIQ Quote</h1>
-            <p>Generated: ${new Date().toLocaleDateString()}</p>
-          </div>
+        // ── Color palette ──
+        const C = {
+          darkBg: 'FF2C2C2E', white: 'FFFFFFFF', lightGray: 'FFF5F5F7',
+          lightBlue: 'FFE3F2FD', medGray: 'FF86868B', primaryDark: 'FF1D1D1F',
+          yellowBg: 'FFFFFBEB', yellowText: 'FF92400E',
+          greenBg: 'FFE8F5E9', green: 'FF34C759',
+          orangeBg: 'FFFFF3E0', orange: 'FFFF9500',
+          redBg: 'FFFFEBEE', red: 'FFFF3B30',
+          gridLine: 'FFE0E0E0'
+        };
+        const currFmt = '"$"#,##0.00';
+        const thinBorder = { style: 'thin', color: { argb: C.gridLine } };
+        const medBorder = { style: 'medium' };
 
-          <div class="specs">
-            <strong>Specifications:</strong> ${width}ft × ${length}ft | ${location.charAt(0).toUpperCase() + location.slice(1)} | ${indoor ? 'Indoor' : 'Outdoor'} | ${duration} days
-          </div>
+        // ── Style helpers ──
+        const fillSolid = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+        const applyGridBorders = (row, cols) => {
+          for (let c = 1; c <= cols; c++) {
+            row.getCell(c).border = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+          }
+        };
+        const writeSectionHeader = (ws, r, text) => {
+          ws.mergeCells(r, 1, r, 8);
+          const cell = ws.getCell(r, 1);
+          cell.value = text;
+          cell.font = { bold: true, size: 12, color: { argb: C.white } };
+          cell.fill = fillSolid(C.darkBg);
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = { top: medBorder, bottom: medBorder, left: medBorder, right: medBorder };
+          ws.getRow(r).height = 24;
+        };
+        const writeSubtotalRow = (ws, r, label, amount) => {
+          const row = ws.getRow(r);
+          row.getCell(1).value = label;
+          row.getCell(1).font = { bold: true, size: 11 };
+          row.getCell(2).value = amount;
+          row.getCell(2).numFmt = currFmt;
+          row.getCell(2).font = { bold: true, size: 11 };
+          for (let c = 1; c <= 8; c++) {
+            row.getCell(c).fill = fillSolid(C.lightGray);
+            row.getCell(c).border = { top: medBorder, bottom: medBorder };
+          }
+        };
+        const writeConfidence = (cell, conf) => {
+          const lc = (conf || '').toLowerCase();
+          cell.value = lc.toUpperCase();
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.font = { bold: true, size: 9, color: { argb: lc === 'high' ? C.green : lc === 'medium' ? C.orange : lc === 'low' ? C.red : C.medGray } };
+          if (lc === 'high') cell.fill = fillSolid(C.greenBg);
+          else if (lc === 'medium') cell.fill = fillSolid(C.orangeBg);
+          else if (lc === 'low') cell.fill = fillSolid(C.redBg);
+        };
 
-          <div class="total-section">
-            <div class="total-amount">${formatCurrency(aiQuote.total)}</div>
-            <p>Total Estimate (incl. ${((aiQuote.tax_rate || 0) * 100).toFixed(2)}% tax)</p>
-          </div>
+        // ── Spec data ──
+        const specs = aiQuote.booth_specs || {};
+        const displayDimensions = specs.dimensions || `${width}ft × ${length}ft`;
+        const displayLocation = specs.location || (location.charAt(0).toUpperCase() + location.slice(1));
+        const displayEvent = specs.event_name || '';
+        const displayDuration = specs.duration_days ? `${specs.duration_days} days` : `${duration} day${duration > 1 ? 's' : ''}`;
+        const currency = getCurrency();
 
-          <div class="section">
-            <h3>Materials - ${formatCurrency(aiQuote.materials?.subtotal)}</h3>
-            ${aiQuote.materials?.walls > 0 ? `<div class="line-item"><span>Walls/Fabrication</span><span>${formatCurrency(aiQuote.materials.walls)}</span></div>` : ''}
-            ${aiQuote.materials?.flooring > 0 ? `<div class="line-item"><span>Flooring</span><span>${formatCurrency(aiQuote.materials.flooring)}</span></div>` : ''}
-            ${aiQuote.materials?.graphics > 0 ? `<div class="line-item"><span>Graphics</span><span>${formatCurrency(aiQuote.materials.graphics)}</span></div>` : ''}
-            ${aiQuote.materials?.av_lighting > 0 ? `<div class="line-item"><span>AV & Lighting</span><span>${formatCurrency(aiQuote.materials.av_lighting)}</span></div>` : ''}
-            ${aiQuote.materials?.furniture > 0 ? `<div class="line-item"><span>Furniture</span><span>${formatCurrency(aiQuote.materials.furniture)}</span></div>` : ''}
-          </div>
+        // ── Create workbook & worksheet ──
+        const workbook = new ExcelJS.Workbook();
+        const ws = workbook.addWorksheet('Quote', {
+          pageSetup: { fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9, orientation: 'portrait',
+            margins: { left: 0.5, right: 0.5, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 } }
+        });
 
-          <div class="section">
-            <h3>Services - ${formatCurrency(aiQuote.services?.subtotal)}</h3>
-            <div class="line-item"><span>Design & PM</span><span>${formatCurrency(aiQuote.services?.design_pm)}</span></div>
-            <div class="line-item"><span>Install & Dismantle</span><span>${formatCurrency(aiQuote.services?.install_dismantle)}</span></div>
-            <div class="line-item"><span>Logistics</span><span>${formatCurrency(aiQuote.services?.logistics)}</span></div>
-          </div>
+        // Column widths
+        ws.columns = [
+          { width: 20 }, { width: 16 }, { width: 35 }, { width: 8 },
+          { width: 15 }, { width: 15 }, { width: 13 }, { width: 12 }
+        ];
 
-          ${aiQuote.notes?.length > 0 ? `<div class="section"><h3>Notes</h3><ul>${aiQuote.notes.map(n => `<li>${n}</li>`).join('')}</ul></div>` : ''}
-        </body></html>`;
+        let r = 1;
 
-        const blob = new Blob([quoteHTML], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
+        // ── 1. Title ──
+        ws.mergeCells(r, 1, r, 8);
+        const titleCell = ws.getCell(r, 1);
+        titleCell.value = 'FabricateIQ Quote';
+        titleCell.font = { bold: true, size: 18, color: { argb: C.primaryDark } };
+        titleCell.fill = fillSolid(C.lightGray);
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(r).height = 36;
+        r++;
+
+        // ── 2. Metadata ──
+        ws.getCell(r, 1).value = 'Generated';
+        ws.getCell(r, 1).font = { color: { argb: C.medGray } };
+        ws.getCell(r, 2).value = new Date().toLocaleDateString();
+        ws.getCell(r, 3).value = 'Currency';
+        ws.getCell(r, 3).font = { color: { argb: C.medGray } };
+        ws.getCell(r, 4).value = currency;
+        ws.getCell(r, 4).font = { bold: true };
+        ws.getCell(r, 5).value = 'Confidence';
+        ws.getCell(r, 5).font = { color: { argb: C.medGray } };
+        writeConfidence(ws.getCell(r, 6), aiQuote.confidence);
+        r++;
+
+        // Event/client name
+        if (displayEvent) {
+          ws.getCell(r, 1).value = displayEvent;
+          ws.getCell(r, 1).font = { italic: true, size: 11, color: { argb: C.medGray } };
+          r++;
+        }
+
+        r++; // separator
+
+        // ── 3. Booth Specifications ──
+        writeSectionHeader(ws, r, 'BOOTH SPECIFICATIONS');
+        r++;
+        const specRows = [
+          ['Dimensions', displayDimensions],
+          ['Square Footage', specs.square_footage || (parseFloat(width) * parseFloat(length))],
+          ['Location', displayLocation],
+          ['Duration', displayDuration]
+        ];
+        specRows.forEach((spec, i) => {
+          ws.getCell(r, 1).value = spec[0];
+          ws.getCell(r, 1).font = { bold: true, size: 11 };
+          ws.getCell(r, 2).value = spec[1];
+          ws.getCell(r, 2).font = { size: 11 };
+          if (i % 2 === 0) {
+            ws.getCell(r, 1).fill = fillSolid(C.lightGray);
+            ws.getCell(r, 2).fill = fillSolid(C.lightGray);
+          }
+          applyGridBorders(ws.getRow(r), 2);
+          r++;
+        });
+
+        r++; // separator
+
+        // ── 4. Materials Breakdown ──
+        writeSectionHeader(ws, r, 'MATERIALS BREAKDOWN');
+        r++;
+
+        // Column headers
+        const matHeaders = ['Category', 'Amount', 'Item', 'Qty', 'Dimensions', 'Unit Price', 'Extended', 'Confidence'];
+        const matHeaderRow = r;
+        matHeaders.forEach((h, i) => {
+          const cell = ws.getCell(r, i + 1);
+          cell.value = h;
+          cell.font = { bold: true, size: 10, color: { argb: C.primaryDark } };
+          cell.fill = fillSolid(C.lightBlue);
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = { bottom: medBorder, top: thinBorder, left: thinBorder, right: thinBorder };
+        });
+        r++;
+
+        // Material categories
+        const matCats = [
+          { key: 'walls', label: 'Walls/Fabrication', liKey: 'walls_line_items' },
+          { key: 'flooring', label: 'Flooring', liKey: 'flooring_line_items' },
+          { key: 'graphics', label: 'Graphics', liKey: 'graphics_line_items' },
+          { key: 'av_lighting', label: 'AV/Lighting', liKey: 'av_lighting_line_items' },
+          { key: 'furniture', label: 'Furniture', liKey: 'furniture_line_items' },
+          { key: 'other', label: 'Other', liKey: 'other_line_items' }
+        ];
+
+        matCats.forEach(cat => {
+          const amt = aiQuote.materials?.[cat.key] || 0;
+          if (amt <= 0) return;
+
+          // Category row
+          const catRow = ws.getRow(r);
+          catRow.getCell(1).value = cat.label;
+          catRow.getCell(1).font = { bold: true, size: 11 };
+          catRow.getCell(2).value = amt;
+          catRow.getCell(2).numFmt = currFmt;
+          catRow.getCell(2).font = { bold: true, size: 11 };
+          catRow.getCell(2).alignment = { horizontal: 'right' };
+          for (let c = 1; c <= 8; c++) {
+            catRow.getCell(c).fill = fillSolid(C.lightBlue);
+            catRow.getCell(c).border = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+          }
+          r++;
+
+          // Line items
+          (aiQuote.materials?.[cat.liKey] || []).forEach(li => {
+            const liRow = ws.getRow(r);
+            liRow.getCell(3).value = li.item || '';
+            liRow.getCell(4).value = li.qty || '';
+            liRow.getCell(5).value = li.dimensions || '';
+            liRow.getCell(6).value = li.unit_price || '';  // string like "$68.75/sqft"
+            if (li.extended) {
+              liRow.getCell(7).value = parseFloat(li.extended) || 0;
+              liRow.getCell(7).numFmt = currFmt;
+              liRow.getCell(7).alignment = { horizontal: 'right' };
+            }
+            if (li.confidence) writeConfidence(liRow.getCell(8), li.confidence);
+            applyGridBorders(liRow, 8);
+            r++;
+          });
+        });
+
+        // Materials Subtotal
+        writeSubtotalRow(ws, r, 'Materials Subtotal', aiQuote.materials?.subtotal || 0);
+        r++;
+        r++; // separator
+
+        // ── 5. Services Breakdown ──
+        writeSectionHeader(ws, r, 'SERVICES BREAKDOWN');
+        r++;
+
+        // Services column headers
+        ['Service', 'Amount', 'Rate', 'Note/Detail'].forEach((h, i) => {
+          const cell = ws.getCell(r, i + 1);
+          cell.value = h;
+          cell.font = { bold: true, size: 10, color: { argb: C.primaryDark } };
+          cell.fill = fillSolid(C.lightBlue);
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = { bottom: medBorder, top: thinBorder, left: thinBorder, right: thinBorder };
+        });
+        r++;
+
+        // Service categories
+        const svcCats = [
+          { label: 'Design/PM', amtKey: 'design_pm', pctKey: 'design_pm_percent', noteKey: 'design_pm_note', liKey: null },
+          { label: 'Install/Dismantle', amtKey: 'install_dismantle', pctKey: 'install_dismantle_percent', noteKey: null, liKey: 'install_dismantle_line_items' },
+          { label: 'Logistics', amtKey: 'logistics', pctKey: 'logistics_percent', noteKey: null, liKey: 'logistics_line_items' },
+          { label: 'Storage', amtKey: 'storage', pctKey: null, noteKey: null, liKey: 'storage_line_items' }
+        ];
+
+        svcCats.forEach(svc => {
+          const amt = aiQuote.services?.[svc.amtKey] || 0;
+          if (amt <= 0) return;
+
+          const svcRow = ws.getRow(r);
+          svcRow.getCell(1).value = svc.label;
+          svcRow.getCell(1).font = { bold: true, size: 11 };
+          svcRow.getCell(2).value = amt;
+          svcRow.getCell(2).numFmt = currFmt;
+          svcRow.getCell(2).alignment = { horizontal: 'right' };
+          const pct = svc.pctKey ? aiQuote.services?.[svc.pctKey] : null;
+          if (pct) svcRow.getCell(3).value = `${pct}%`;
+          const note = svc.noteKey ? aiQuote.services?.[svc.noteKey] : null;
+          if (note) {
+            svcRow.getCell(4).value = note;
+            svcRow.getCell(4).font = { size: 10, color: { argb: C.medGray } };
+          }
+          applyGridBorders(svcRow, 4);
+          r++;
+
+          // Service line items (I&D, logistics, storage details)
+          if (svc.liKey) {
+            (aiQuote.services?.[svc.liKey] || []).forEach(li => {
+              const liRow = ws.getRow(r);
+              liRow.getCell(3).value = li.item || '';
+              liRow.getCell(4).value = li.qty || '';
+              if (li.dimensions) liRow.getCell(3).value = `${li.item || ''} (${li.dimensions})`;
+              if (li.extended) {
+                liRow.getCell(2).value = parseFloat(li.extended) || 0;
+                liRow.getCell(2).numFmt = currFmt;
+                liRow.getCell(2).alignment = { horizontal: 'right' };
+              }
+              applyGridBorders(liRow, 4);
+              r++;
+            });
+          }
+        });
+
+        // Services Subtotal
+        writeSubtotalRow(ws, r, 'Services Subtotal', aiQuote.services?.subtotal || 0);
+        r++;
+        r++; // separator
+
+        // ── 6. Totals section ──
+        if (aiQuote.contingency > 0) {
+          const row = ws.getRow(r);
+          row.getCell(1).value = 'Contingency';
+          row.getCell(1).font = { size: 11 };
+          row.getCell(2).value = aiQuote.contingency;
+          row.getCell(2).numFmt = currFmt;
+          row.getCell(2).alignment = { horizontal: 'right' };
+          applyGridBorders(row, 2);
+          r++;
+        }
+
+        // Subtotal before tax
+        const stRow = ws.getRow(r);
+        stRow.getCell(1).value = 'Subtotal before tax';
+        stRow.getCell(1).font = { bold: true, size: 11 };
+        stRow.getCell(2).value = aiQuote.subtotal_before_tax || 0;
+        stRow.getCell(2).numFmt = currFmt;
+        stRow.getCell(2).font = { bold: true, size: 11 };
+        stRow.getCell(2).alignment = { horizontal: 'right' };
+        for (let c = 1; c <= 8; c++) stRow.getCell(c).border = { top: thinBorder };
+        r++;
+
+        // Tax
+        const taxRow = ws.getRow(r);
+        taxRow.getCell(1).value = `Tax (${((aiQuote.tax_rate || 0) * 100).toFixed(2)}%)`;
+        taxRow.getCell(1).font = { size: 11 };
+        taxRow.getCell(2).value = aiQuote.tax_amount || 0;
+        taxRow.getCell(2).numFmt = currFmt;
+        taxRow.getCell(2).alignment = { horizontal: 'right' };
+        applyGridBorders(taxRow, 2);
+        r++;
+
+        // ── TOTAL row ──
+        const totalRow = ws.getRow(r);
+        totalRow.height = 35;
+        totalRow.getCell(1).value = 'TOTAL';
+        totalRow.getCell(1).font = { bold: true, size: 16, color: { argb: C.white } };
+        totalRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+        totalRow.getCell(2).value = aiQuote.total || 0;
+        totalRow.getCell(2).numFmt = currFmt;
+        totalRow.getCell(2).font = { bold: true, size: 16, color: { argb: C.white } };
+        totalRow.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
+        for (let c = 1; c <= 8; c++) {
+          totalRow.getCell(c).fill = fillSolid(C.darkBg);
+          totalRow.getCell(c).border = { top: { style: 'thick' }, bottom: { style: 'thick' }, left: { style: 'thick' }, right: { style: 'thick' } };
+        }
+        r++;
+
+        // ── 7. Notes ──
+        if (aiQuote.notes?.length > 0) {
+          r++; // separator
+          writeSectionHeader(ws, r, 'NOTES & ASSUMPTIONS');
+          // Override to yellow style
+          ws.getCell(r, 1).font = { bold: true, size: 11, color: { argb: C.yellowText } };
+          ws.getCell(r, 1).fill = fillSolid(C.yellowBg);
+          r++;
+
+          aiQuote.notes.forEach(note => {
+            ws.mergeCells(r, 1, r, 8);
+            const noteCell = ws.getCell(r, 1);
+            noteCell.value = `• ${note}`;
+            noteCell.font = { size: 10, italic: true, color: { argb: C.yellowText } };
+            noteCell.fill = fillSolid(C.yellowBg);
+            noteCell.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+            noteCell.border = { bottom: thinBorder };
+            ws.getRow(r).height = 22;
+            r++;
+          });
+        }
+
+        // ── Freeze panes & print ──
+        ws.views = [{ state: 'frozen', ySplit: matHeaderRow, xSplit: 0 }];
+        ws.pageSetup.printArea = `A1:H${r - 1}`;
+
+        // ── Generate and download ──
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `boothiq-quote-${new Date().toISOString().split('T')[0]}.html`;
+        link.download = `fabricateiq-quote-${new Date().toISOString().split('T')[0]}.xlsx`;
         link.click();
+        window.URL.revokeObjectURL(url);
       };
 
       return (
         <div className="container">
           {/* Header */}
           <div className="header">
-            <h1>BoothIQ</h1>
+            <h1>FabricateIQ</h1>
             <p>Professional booth estimation powered by AI</p>
           </div>
 
@@ -1097,12 +1977,14 @@
                   <button
                     className={`segment-btn ${indoor ? 'active' : ''}`}
                     onClick={() => setIndoor(true)}
+                    disabled={!!uploadedPDF}
                   >
                     Indoor
                   </button>
                   <button
                     className={`segment-btn ${!indoor ? 'active' : ''}`}
                     onClick={() => setIndoor(false)}
+                    disabled={!!uploadedPDF}
                   >
                     Outdoor
                   </button>
@@ -1120,6 +2002,7 @@
                   min="1"
                   step="0.5"
                   placeholder="Width"
+                  disabled={!!uploadedPDF}
                 />
                 <span className="dimensions-x">×</span>
                 <input
@@ -1129,6 +2012,7 @@
                   min="1"
                   step="0.5"
                   placeholder="Length"
+                  disabled={!!uploadedPDF}
                 />
               </div>
             </div>
@@ -1211,7 +2095,16 @@
               )}
 
               {uploadedPDF && (
-                <div className="pdf-badge">📄 {uploadedPDF}</div>
+                <div className="pdf-badge">
+                  📄 {uploadedPDF}
+                  <button
+                    className="clear-pdf-btn"
+                    onClick={(e) => { e.stopPropagation(); setUploadedPDF(null); setPdfText(''); }}
+                    title="Clear PDF and edit manually"
+                  >
+                    ✕
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -1255,39 +2148,57 @@
                   <div className="breakdown-card">
                     <div className="breakdown-title">Materials</div>
                     {aiQuote.materials?.walls > 0 && (
-                      <div className="breakdown-item">
-                        <span className="breakdown-item-label">Walls/Fabrication</span>
-                        <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.walls)}</span>
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Walls/Fabrication</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.walls)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.materials.walls_line_items} label="wall" />
                       </div>
                     )}
                     {aiQuote.materials?.flooring > 0 && (
-                      <div className="breakdown-item">
-                        <span className="breakdown-item-label">Flooring</span>
-                        <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.flooring)}</span>
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Flooring</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.flooring)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.materials.flooring_line_items} label="flooring" />
                       </div>
                     )}
                     {aiQuote.materials?.graphics > 0 && (
-                      <div className="breakdown-item">
-                        <span className="breakdown-item-label">Graphics</span>
-                        <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.graphics)}</span>
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Graphics</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.graphics)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.materials.graphics_line_items} label="graphics" />
                       </div>
                     )}
                     {aiQuote.materials?.av_lighting > 0 && (
-                      <div className="breakdown-item">
-                        <span className="breakdown-item-label">AV & Lighting</span>
-                        <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.av_lighting)}</span>
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">AV & Lighting</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.av_lighting)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.materials.av_lighting_line_items} label="av" />
                       </div>
                     )}
                     {aiQuote.materials?.furniture > 0 && (
-                      <div className="breakdown-item">
-                        <span className="breakdown-item-label">Furniture</span>
-                        <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.furniture)}</span>
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Furniture</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.furniture)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.materials.furniture_line_items} label="furniture" />
                       </div>
                     )}
                     {aiQuote.materials?.other > 0 && (
-                      <div className="breakdown-item">
-                        <span className="breakdown-item-label">Other</span>
-                        <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.other)}</span>
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Other</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.materials.other)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.materials.other_line_items} label="other" />
                       </div>
                     )}
                     <div className="breakdown-item breakdown-subtotal">
@@ -1298,18 +2209,44 @@
 
                   <div className="breakdown-card">
                     <div className="breakdown-title">Services</div>
-                    <div className="breakdown-item">
-                      <span className="breakdown-item-label">Design & PM</span>
-                      <span className="breakdown-item-value">{formatCurrency(aiQuote.services?.design_pm)}</span>
-                    </div>
-                    <div className="breakdown-item">
-                      <span className="breakdown-item-label">Install & Dismantle</span>
-                      <span className="breakdown-item-value">{formatCurrency(aiQuote.services?.install_dismantle)}</span>
-                    </div>
-                    <div className="breakdown-item">
-                      <span className="breakdown-item-label">Logistics</span>
-                      <span className="breakdown-item-value">{formatCurrency(aiQuote.services?.logistics)}</span>
-                    </div>
+                    {aiQuote.services?.design_pm > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Design & PM {aiQuote.services.design_pm_percent ? `(${aiQuote.services.design_pm_percent}%)` : ''}</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.services.design_pm)}</span>
+                        </div>
+                        {aiQuote.services.design_pm_note && (
+                          <div className="service-note">{aiQuote.services.design_pm_note}</div>
+                        )}
+                      </div>
+                    )}
+                    {aiQuote.services?.install_dismantle > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Install & Dismantle {aiQuote.services.install_dismantle_percent ? `(${aiQuote.services.install_dismantle_percent}%)` : ''}</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.services.install_dismantle)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.services.install_dismantle_line_items} label="I&D" />
+                      </div>
+                    )}
+                    {aiQuote.services?.logistics > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Logistics {aiQuote.services.logistics_percent ? `(${aiQuote.services.logistics_percent}%)` : ''}</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.services.logistics)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.services.logistics_line_items} label="logistics" />
+                      </div>
+                    )}
+                    {aiQuote.services?.storage > 0 && (
+                      <div>
+                        <div className="breakdown-item">
+                          <span className="breakdown-item-label">Storage</span>
+                          <span className="breakdown-item-value">{formatCurrency(aiQuote.services.storage)}</span>
+                        </div>
+                        <LineItemDetail currency={getCurrency()} lineItems={aiQuote.services.storage_line_items} label="storage" />
+                      </div>
+                    )}
                     <div className="breakdown-item breakdown-subtotal">
                       <span className="breakdown-item-label">Subtotal</span>
                       <span className="breakdown-item-value">{formatCurrency(aiQuote.services?.subtotal)}</span>
@@ -1349,7 +2286,7 @@
               </div>
 
               <button className="btn-secondary" onClick={downloadQuote} style={{ marginTop: 24 }}>
-                Download Quote
+                Download Excel (.xlsx)
               </button>
             </div>
           )}
@@ -1382,11 +2319,103 @@
               </div>
             </div>
           )}
+
+          {/* ── Floating Chat Trigger ── */}
+          {aiQuote && !showChat && (
+            <button className="chat-fab" onClick={() => setShowChat(true)}>
+              💬 Adjust Quote
+            </button>
+          )}
+
+          {/* ── Chat Backdrop ── */}
+          <div
+            className={`chat-backdrop ${showChat ? 'visible' : ''}`}
+            onClick={() => setShowChat(false)}
+          />
+
+          {/* ── Chat Slide-out Panel ── */}
+          <div className={`chat-panel ${showChat ? 'open' : ''}`}>
+            <div className="chat-header">
+              <div className="chat-header-left">
+                <span className="chat-header-title">Adjust Your Quote</span>
+                <span className="chat-version-badge">v{quoteVersions.length}</span>
+              </div>
+              <button className="chat-close-btn" onClick={() => setShowChat(false)} title="Close">✕</button>
+            </div>
+
+            <div className="chat-messages">
+              {/* Welcome message */}
+              <div className="chat-welcome">
+                <div className="chat-welcome-title">Your quote is ready. Ask me to adjust it:</div>
+                <ul>
+                  <li>"Swap the G-Floor for carpet"</li>
+                  <li>"Add 2 more lightboxes"</li>
+                  <li>"What if we use AGAM walls instead of MDF?"</li>
+                  <li>"Remove the AV package"</li>
+                  <li>"What's the total if we go to Montreal?"</li>
+                </ul>
+              </div>
+
+              {/* Chat messages */}
+              {chatMessages.map((msg, i) => (
+                msg.role === 'user' ? (
+                  <div key={i} className="chat-bubble chat-bubble-user">{msg.content}</div>
+                ) : (
+                  <div key={i} className={`chat-bubble chat-bubble-assistant${msg.whatIf ? ' what-if' : ''}`}>
+                    {msg.content}
+                    {!msg.applied && msg.whatIf && msg.updatedQuote && (
+                      <div className="chat-whatif-actions">
+                        <button className="chat-btn-apply" onClick={() => applyWhatIf(i)}>Apply this change</button>
+                        <button className="chat-btn-keep" onClick={() => {
+                          setChatMessages(prev => prev.map((m, idx) =>
+                            idx === i ? { ...m, whatIf: false, dismissed: true } : m
+                          ));
+                        }}>Keep current</button>
+                      </div>
+                    )}
+                    {msg.updatedQuote && !msg.whatIf && !msg.dismissed && (
+                      <div className="chat-applied-badge">Changes applied</div>
+                    )}
+                  </div>
+                )
+              ))}
+
+              {/* Typing indicator */}
+              {chatLoading && (
+                <div className="chat-typing">
+                  <div className="chat-typing-dot"></div>
+                  <div className="chat-typing-dot"></div>
+                  <div className="chat-typing-dot"></div>
+                </div>
+              )}
+
+              <div ref={chatEndRef} />
+            </div>
+
+            <div className="chat-input-area">
+              <input
+                className="chat-input"
+                type="text"
+                placeholder="Ask to adjust your quote..."
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
+                disabled={chatLoading}
+              />
+              <button
+                className="chat-send-btn"
+                onClick={sendChatMessage}
+                disabled={chatLoading || !chatInput.trim()}
+              >
+                {chatLoading ? '...' : 'Send'}
+              </button>
+            </div>
+          </div>
         </div>
       );
     }
 
-    ReactDOM.render(<BoothIQ />, document.getElementById('root'));
+    ReactDOM.render(<FabricateIQ />, document.getElementById('root'));
   </script>
 </body>
 </html>

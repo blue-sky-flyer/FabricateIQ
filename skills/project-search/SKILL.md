@@ -5,7 +5,7 @@ description: Search historical booth projects by client, type, size, or specific
 
 # Project Search
 
-Find relevant historical projects from the BoothIQ knowledge base.
+Find relevant historical projects from the FabricateIQ knowledge base.
 
 ## Project Index
 
@@ -74,7 +74,7 @@ Find relevant historical projects from the BoothIQ knowledge base.
 
 Detailed project files are stored at:
 ```
-/mnt/documents/Hanoz - Booth Quote Autogen/{ID} {Client}/
+Training Files/{ID} {Client}/
 ```
 
 Each folder typically contains:
@@ -103,7 +103,7 @@ When returning project matches:
 
 **Useful For:** [Why this project is relevant to the query]
 
-**Files:** `/mnt/documents/Hanoz - Booth Quote Autogen/{ID} {Client}/`
+**Files:** `Training Files/{ID} {Client}/`
 ```
 
 ## Example Queries

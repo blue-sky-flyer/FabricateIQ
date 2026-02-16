@@ -5,14 +5,14 @@ description: Query booth component pricing from knowledge base. Use when looking
 
 # Catalog Query
 
-Retrieve accurate pricing data from the BoothIQ knowledge base.
+Retrieve accurate pricing data from the FabricateIQ knowledge base.
 
 ## Knowledge Base Files
 
 | File | Path | Contents |
 |------|------|----------|
-| MASTER_CATALOG.md | `/mnt/documents/Hanoz - Booth Quote Autogen/MASTER_CATALOG.md` | Human-readable pricing reference |
-| components.json | `/mnt/documents/Hanoz - Booth Quote Autogen/components.json` | Structured component data |
+| MASTER_CATALOG.md | `Processed Files/MASTER_CATALOG.md` | Human-readable pricing reference |
+| components.json | `Processed Files/components.json` | Structured component data |
 
 ## Query Types
 

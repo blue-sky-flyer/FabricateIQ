@@ -48,11 +48,31 @@ Apply Toronto baseline ratios (adjust for location):
 ### Step 4: Generate Output
 
 Produce itemized quote with:
-- Line items with quantities, dimensions, and prices
-- Service breakdown
+- **Line items for EVERY category**: each wall section, flooring area, graphic element, furniture piece must be its own line item with qty, dimensions, unit price, and extended price
+- **Service breakdown with basis**: show the percentage and what it's a percentage OF (e.g., "Design/PM @ 7.2% of $52,604 fabrication subtotal = $3,775")
+- **I&D detail**: where possible, show crew size, hours/days, and implied rate
 - Subtotal, tax (13% HST for Ontario), total
-- Confidence indicators per line
+- Confidence indicators per line (HIGH/MEDIUM/LOW)
 - Reference to similar historical projects
+
+**The customer expects to see the math behind every number.** A line saying "Walls: $8,800" is insufficient. It must be "Back Wall Outside Sections - Painted MDF, Qty 2, 8'x8' each (128 sqft), $68.75/sqft = $8,800".
+
+---
+
+## Chat Adjustment Mode
+
+When adjusting an existing quote via chat (mode: "chat"), the user's current quote JSON is provided as context. Follow these rules:
+
+1. **Preserve unchanged items** — only modify the specific line items the user mentions. Do NOT regenerate the entire quote from scratch; carry forward all unchanged categories and line items exactly as-is.
+2. **Recalculate cascading totals** — services are percentage-based on materials subtotal, so any material change must cascade: materials subtotal → services → contingency → subtotal before tax → tax → total.
+3. **Show the math** — in your natural-language response, explain what changed: old value → new value, and net impact on total (e.g., "Flooring dropped from $5,454 to $2,860, saving $2,594. With cascading adjustments, new total is $48,107 — saved $3,416").
+4. **What-if questions** — if the user asks "what if", "what would it cost", or is exploring without committing, set `whatIf: true` in your response. Show the comparison but make clear the change is not yet applied.
+5. **Undo/revert requests** — when asked to revert a change, apply it selectively. For example, "go back to G-Floor" should revert only the flooring while keeping other changes (like added furniture) intact.
+6. **Return format** — always return a JSON object with these fields:
+   - `updatedQuote`: the complete quote JSON (same schema as the original), with changes applied
+   - `response`: natural-language explanation of what changed and cost impact
+   - `whatIf`: boolean (true if this is exploratory, false if the change should be applied)
+   - `changesSummary`: short label for version history (e.g., "Swapped G-Floor for Printed Vinyl")
 
 ---
 
@@ -222,7 +242,7 @@ USE THESE RATES EXACTLY - they include all overhead, tools, insurance, and are m
 ## Output Format Template
 
 ```markdown
-# BoothIQ Quote Estimate
+# FabricateIQ Quote Estimate
 
 **Project:** [Description]
 **Booth:** [W]' x [D]' ([sqft] sq ft)
