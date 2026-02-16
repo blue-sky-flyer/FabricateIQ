@@ -7,12 +7,21 @@ const ALLOWED_ORIGINS = [
 ];
 
 /**
+ * Check if an origin is allowed (exact match or *.vercel.app pattern).
+ */
+function isAllowedOrigin(origin) {
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  // Allow Vercel preview deployments (e.g. fabricateiq-abc123.vercel.app)
+  if (/^https:\/\/fabricateiq[a-z0-9-]*\.vercel\.app$/.test(origin)) return true;
+  return false;
+}
+
+/**
  * Build CORS headers for the given request origin.
- * Returns 403 response if origin is not whitelisted (for preflight).
  */
 export function getCorsHeaders(request) {
   const origin = request.headers.get('Origin') || '';
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allowed = isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -28,7 +37,7 @@ export function handleCorsPreflightIfNeeded(request) {
   if (request.method !== 'OPTIONS') return null;
 
   const origin = request.headers.get('Origin') || '';
-  if (!ALLOWED_ORIGINS.includes(origin)) {
+  if (!isAllowedOrigin(origin)) {
     return new Response(null, { status: 403 });
   }
 
@@ -42,6 +51,9 @@ export function handleCorsPreflightIfNeeded(request) {
 export function authenticateRequest(request, env, corsHeaders) {
   const authHeader = request.headers.get('Authorization') || '';
   const token = authHeader.replace('Bearer ', '');
+
+  // Skip auth if WORKER_AUTH_TOKEN secret is not configured yet
+  if (!env.WORKER_AUTH_TOKEN) return null;
 
   if (!token || token !== env.WORKER_AUTH_TOKEN) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {

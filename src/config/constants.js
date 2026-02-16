@@ -6,7 +6,7 @@ export const GEMINI_WORKER_URL = 'https://fabricateiq-gemini.raj-lucia001.worker
 export const WORKER_AUTH_TOKEN = 'fiq-2024-public-client';
 
 // Default AI model for quote generation
-export const DEFAULT_QUOTE_MODEL = 'gemini-3-pro';
+export const DEFAULT_QUOTE_MODEL = 'gemini-3-pro-preview';
 
 // Duration options (days)
 export const DURATION_OPTIONS = [1, 3, 7, 30];
