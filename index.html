@@ -9,7 +9,7 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="lib/pdf.min.js"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <style>
     /* Apple-inspired design system */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1500,79 +1500,359 @@ Provide a complete quote with materials breakdown, services (design/PM, install/
         }).format(value || 0);
       };
 
-      const downloadQuote = () => {
+      const downloadQuote = async () => {
         if (!aiQuote) return;
 
-        // Use AI-extracted specs if available (from PDF), otherwise use form values
+        // ── Color palette ──
+        const C = {
+          darkBg: 'FF2C2C2E', white: 'FFFFFFFF', lightGray: 'FFF5F5F7',
+          lightBlue: 'FFE3F2FD', medGray: 'FF86868B', primaryDark: 'FF1D1D1F',
+          yellowBg: 'FFFFFBEB', yellowText: 'FF92400E',
+          greenBg: 'FFE8F5E9', green: 'FF34C759',
+          orangeBg: 'FFFFF3E0', orange: 'FFFF9500',
+          redBg: 'FFFFEBEE', red: 'FFFF3B30',
+          gridLine: 'FFE0E0E0'
+        };
+        const currFmt = '"$"#,##0.00';
+        const thinBorder = { style: 'thin', color: { argb: C.gridLine } };
+        const medBorder = { style: 'medium' };
+
+        // ── Style helpers ──
+        const fillSolid = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+        const applyGridBorders = (row, cols) => {
+          for (let c = 1; c <= cols; c++) {
+            row.getCell(c).border = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+          }
+        };
+        const writeSectionHeader = (ws, r, text) => {
+          ws.mergeCells(r, 1, r, 8);
+          const cell = ws.getCell(r, 1);
+          cell.value = text;
+          cell.font = { bold: true, size: 12, color: { argb: C.white } };
+          cell.fill = fillSolid(C.darkBg);
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = { top: medBorder, bottom: medBorder, left: medBorder, right: medBorder };
+          ws.getRow(r).height = 24;
+        };
+        const writeSubtotalRow = (ws, r, label, amount) => {
+          const row = ws.getRow(r);
+          row.getCell(1).value = label;
+          row.getCell(1).font = { bold: true, size: 11 };
+          row.getCell(2).value = amount;
+          row.getCell(2).numFmt = currFmt;
+          row.getCell(2).font = { bold: true, size: 11 };
+          for (let c = 1; c <= 8; c++) {
+            row.getCell(c).fill = fillSolid(C.lightGray);
+            row.getCell(c).border = { top: medBorder, bottom: medBorder };
+          }
+        };
+        const writeConfidence = (cell, conf) => {
+          const lc = (conf || '').toLowerCase();
+          cell.value = lc.toUpperCase();
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.font = { bold: true, size: 9, color: { argb: lc === 'high' ? C.green : lc === 'medium' ? C.orange : lc === 'low' ? C.red : C.medGray } };
+          if (lc === 'high') cell.fill = fillSolid(C.greenBg);
+          else if (lc === 'medium') cell.fill = fillSolid(C.orangeBg);
+          else if (lc === 'low') cell.fill = fillSolid(C.redBg);
+        };
+
+        // ── Spec data ──
         const specs = aiQuote.booth_specs || {};
         const displayDimensions = specs.dimensions || `${width}ft × ${length}ft`;
         const displayLocation = specs.location || (location.charAt(0).toUpperCase() + location.slice(1));
         const displayEvent = specs.event_name || '';
         const displayDuration = specs.duration_days ? `${specs.duration_days} days` : `${duration} day${duration > 1 ? 's' : ''}`;
+        const currency = getCurrency();
 
-        // Build worksheet data for Excel
-        const wsData = [
-          ['BoothIQ Quote'],
-          ['Generated', new Date().toLocaleDateString()],
-          ['Currency', getCurrency()],
-          [],
-          ['BOOTH SPECIFICATIONS'],
+        // ── Create workbook & worksheet ──
+        const workbook = new ExcelJS.Workbook();
+        const ws = workbook.addWorksheet('Quote', {
+          pageSetup: { fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9, orientation: 'portrait',
+            margins: { left: 0.5, right: 0.5, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 } }
+        });
+
+        // Column widths
+        ws.columns = [
+          { width: 20 }, { width: 16 }, { width: 35 }, { width: 8 },
+          { width: 15 }, { width: 15 }, { width: 13 }, { width: 12 }
+        ];
+
+        let r = 1;
+
+        // ── 1. Title ──
+        ws.mergeCells(r, 1, r, 8);
+        const titleCell = ws.getCell(r, 1);
+        titleCell.value = 'BoothIQ Quote';
+        titleCell.font = { bold: true, size: 18, color: { argb: C.primaryDark } };
+        titleCell.fill = fillSolid(C.lightGray);
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(r).height = 36;
+        r++;
+
+        // ── 2. Metadata ──
+        ws.getCell(r, 1).value = 'Generated';
+        ws.getCell(r, 1).font = { color: { argb: C.medGray } };
+        ws.getCell(r, 2).value = new Date().toLocaleDateString();
+        ws.getCell(r, 3).value = 'Currency';
+        ws.getCell(r, 3).font = { color: { argb: C.medGray } };
+        ws.getCell(r, 4).value = currency;
+        ws.getCell(r, 4).font = { bold: true };
+        ws.getCell(r, 5).value = 'Confidence';
+        ws.getCell(r, 5).font = { color: { argb: C.medGray } };
+        writeConfidence(ws.getCell(r, 6), aiQuote.confidence);
+        r++;
+
+        // Event/client name
+        if (displayEvent) {
+          ws.getCell(r, 1).value = displayEvent;
+          ws.getCell(r, 1).font = { italic: true, size: 11, color: { argb: C.medGray } };
+          r++;
+        }
+
+        r++; // separator
+
+        // ── 3. Booth Specifications ──
+        writeSectionHeader(ws, r, 'BOOTH SPECIFICATIONS');
+        r++;
+        const specRows = [
           ['Dimensions', displayDimensions],
           ['Square Footage', specs.square_footage || (parseFloat(width) * parseFloat(length))],
           ['Location', displayLocation],
-          ...(displayEvent ? [['Event', displayEvent]] : []),
-          ['Duration', displayDuration],
-          [],
-          ['ESTIMATE'],
-          ['Total', aiQuote.total],
-          ['Tax Rate', `${((aiQuote.tax_rate || 0) * 100).toFixed(2)}%`],
-          [],
-          ['MATERIALS BREAKDOWN'],
-          ['Category', 'Amount', 'Item', 'Qty', 'Dimensions', 'Unit Price', 'Extended', 'Confidence'],
-          ['Walls/Fabrication', aiQuote.materials?.walls || 0],
-          ...(aiQuote.materials?.walls_line_items || []).map(li => ['', '', li.item, li.qty || '', li.dimensions || '', li.unit_price || '', li.extended || '', li.confidence || '']),
-          ['Flooring', aiQuote.materials?.flooring || 0],
-          ...(aiQuote.materials?.flooring_line_items || []).map(li => ['', '', li.item, li.qty || '', li.dimensions || '', li.unit_price || '', li.extended || '', li.confidence || '']),
-          ['Graphics', aiQuote.materials?.graphics || 0],
-          ...(aiQuote.materials?.graphics_line_items || []).map(li => ['', '', li.item, li.qty || '', li.dimensions || '', li.unit_price || '', li.extended || '', li.confidence || '']),
-          ['AV/Lighting', aiQuote.materials?.av_lighting || 0],
-          ...(aiQuote.materials?.av_lighting_line_items || []).map(li => ['', '', li.item, li.qty || '', li.dimensions || '', li.unit_price || '', li.extended || '', li.confidence || '']),
-          ['Furniture', aiQuote.materials?.furniture || 0],
-          ...(aiQuote.materials?.furniture_line_items || []).map(li => ['', '', li.item, li.qty || '', li.dimensions || '', li.unit_price || '', li.extended || '', li.confidence || '']),
-          ['Other', aiQuote.materials?.other || 0],
-          ...(aiQuote.materials?.other_line_items || []).map(li => ['', '', li.item, li.qty || '', li.dimensions || '', li.unit_price || '', li.extended || '', li.confidence || '']),
-          ['Materials Subtotal', aiQuote.materials?.subtotal || 0],
-          [],
-          ['SERVICES BREAKDOWN'],
-          ['Service', 'Amount', 'Rate', 'Note/Detail'],
-          ['Design/PM', aiQuote.services?.design_pm || 0, aiQuote.services?.design_pm_percent ? `${aiQuote.services.design_pm_percent}%` : '', aiQuote.services?.design_pm_note || ''],
-          ['Install/Dismantle', aiQuote.services?.install_dismantle || 0, aiQuote.services?.install_dismantle_percent ? `${aiQuote.services.install_dismantle_percent}%` : ''],
-          ...(aiQuote.services?.install_dismantle_line_items || []).map(li => ['', '', li.item, li.qty || '', li.dimensions || '', li.unit_price || '', li.extended || '']),
-          ['Logistics', aiQuote.services?.logistics || 0, aiQuote.services?.logistics_percent ? `${aiQuote.services.logistics_percent}%` : ''],
-          ...(aiQuote.services?.logistics_line_items || []).map(li => ['', '', li.item, li.qty || '', li.dimensions || '', li.unit_price || '', li.extended || '']),
-          ...(aiQuote.services?.storage ? [['Storage', aiQuote.services.storage]] : []),
-          ...(aiQuote.services?.storage_line_items || []).map(li => ['', '', li.item, li.qty || '', li.dimensions || '', li.unit_price || '', li.extended || '']),
-          ['Services Subtotal', aiQuote.services?.subtotal || 0],
+          ['Duration', displayDuration]
+        ];
+        specRows.forEach((spec, i) => {
+          ws.getCell(r, 1).value = spec[0];
+          ws.getCell(r, 1).font = { bold: true, size: 11 };
+          ws.getCell(r, 2).value = spec[1];
+          ws.getCell(r, 2).font = { size: 11 };
+          if (i % 2 === 0) {
+            ws.getCell(r, 1).fill = fillSolid(C.lightGray);
+            ws.getCell(r, 2).fill = fillSolid(C.lightGray);
+          }
+          applyGridBorders(ws.getRow(r), 2);
+          r++;
+        });
+
+        r++; // separator
+
+        // ── 4. Materials Breakdown ──
+        writeSectionHeader(ws, r, 'MATERIALS BREAKDOWN');
+        r++;
+
+        // Column headers
+        const matHeaders = ['Category', 'Amount', 'Item', 'Qty', 'Dimensions', 'Unit Price', 'Extended', 'Confidence'];
+        const matHeaderRow = r;
+        matHeaders.forEach((h, i) => {
+          const cell = ws.getCell(r, i + 1);
+          cell.value = h;
+          cell.font = { bold: true, size: 10, color: { argb: C.primaryDark } };
+          cell.fill = fillSolid(C.lightBlue);
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = { bottom: medBorder, top: thinBorder, left: thinBorder, right: thinBorder };
+        });
+        r++;
+
+        // Material categories
+        const matCats = [
+          { key: 'walls', label: 'Walls/Fabrication', liKey: 'walls_line_items' },
+          { key: 'flooring', label: 'Flooring', liKey: 'flooring_line_items' },
+          { key: 'graphics', label: 'Graphics', liKey: 'graphics_line_items' },
+          { key: 'av_lighting', label: 'AV/Lighting', liKey: 'av_lighting_line_items' },
+          { key: 'furniture', label: 'Furniture', liKey: 'furniture_line_items' },
+          { key: 'other', label: 'Other', liKey: 'other_line_items' }
         ];
 
-        // Add notes if present
-        if (aiQuote.notes?.length > 0) {
-          wsData.push([]);
-          wsData.push(['NOTES']);
-          aiQuote.notes.forEach(note => wsData.push([note]));
+        matCats.forEach(cat => {
+          const amt = aiQuote.materials?.[cat.key] || 0;
+          if (amt <= 0) return;
+
+          // Category row
+          const catRow = ws.getRow(r);
+          catRow.getCell(1).value = cat.label;
+          catRow.getCell(1).font = { bold: true, size: 11 };
+          catRow.getCell(2).value = amt;
+          catRow.getCell(2).numFmt = currFmt;
+          catRow.getCell(2).font = { bold: true, size: 11 };
+          catRow.getCell(2).alignment = { horizontal: 'right' };
+          for (let c = 1; c <= 8; c++) {
+            catRow.getCell(c).fill = fillSolid(C.lightBlue);
+            catRow.getCell(c).border = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+          }
+          r++;
+
+          // Line items
+          (aiQuote.materials?.[cat.liKey] || []).forEach(li => {
+            const liRow = ws.getRow(r);
+            liRow.getCell(3).value = li.item || '';
+            liRow.getCell(4).value = li.qty || '';
+            liRow.getCell(5).value = li.dimensions || '';
+            liRow.getCell(6).value = li.unit_price || '';  // string like "$68.75/sqft"
+            if (li.extended) {
+              liRow.getCell(7).value = parseFloat(li.extended) || 0;
+              liRow.getCell(7).numFmt = currFmt;
+              liRow.getCell(7).alignment = { horizontal: 'right' };
+            }
+            if (li.confidence) writeConfidence(liRow.getCell(8), li.confidence);
+            applyGridBorders(liRow, 8);
+            r++;
+          });
+        });
+
+        // Materials Subtotal
+        writeSubtotalRow(ws, r, 'Materials Subtotal', aiQuote.materials?.subtotal || 0);
+        r++;
+        r++; // separator
+
+        // ── 5. Services Breakdown ──
+        writeSectionHeader(ws, r, 'SERVICES BREAKDOWN');
+        r++;
+
+        // Services column headers
+        ['Service', 'Amount', 'Rate', 'Note/Detail'].forEach((h, i) => {
+          const cell = ws.getCell(r, i + 1);
+          cell.value = h;
+          cell.font = { bold: true, size: 10, color: { argb: C.primaryDark } };
+          cell.fill = fillSolid(C.lightBlue);
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = { bottom: medBorder, top: thinBorder, left: thinBorder, right: thinBorder };
+        });
+        r++;
+
+        // Service categories
+        const svcCats = [
+          { label: 'Design/PM', amtKey: 'design_pm', pctKey: 'design_pm_percent', noteKey: 'design_pm_note', liKey: null },
+          { label: 'Install/Dismantle', amtKey: 'install_dismantle', pctKey: 'install_dismantle_percent', noteKey: null, liKey: 'install_dismantle_line_items' },
+          { label: 'Logistics', amtKey: 'logistics', pctKey: 'logistics_percent', noteKey: null, liKey: 'logistics_line_items' },
+          { label: 'Storage', amtKey: 'storage', pctKey: null, noteKey: null, liKey: 'storage_line_items' }
+        ];
+
+        svcCats.forEach(svc => {
+          const amt = aiQuote.services?.[svc.amtKey] || 0;
+          if (amt <= 0) return;
+
+          const svcRow = ws.getRow(r);
+          svcRow.getCell(1).value = svc.label;
+          svcRow.getCell(1).font = { bold: true, size: 11 };
+          svcRow.getCell(2).value = amt;
+          svcRow.getCell(2).numFmt = currFmt;
+          svcRow.getCell(2).alignment = { horizontal: 'right' };
+          const pct = svc.pctKey ? aiQuote.services?.[svc.pctKey] : null;
+          if (pct) svcRow.getCell(3).value = `${pct}%`;
+          const note = svc.noteKey ? aiQuote.services?.[svc.noteKey] : null;
+          if (note) {
+            svcRow.getCell(4).value = note;
+            svcRow.getCell(4).font = { size: 10, color: { argb: C.medGray } };
+          }
+          applyGridBorders(svcRow, 4);
+          r++;
+
+          // Service line items (I&D, logistics, storage details)
+          if (svc.liKey) {
+            (aiQuote.services?.[svc.liKey] || []).forEach(li => {
+              const liRow = ws.getRow(r);
+              liRow.getCell(3).value = li.item || '';
+              liRow.getCell(4).value = li.qty || '';
+              if (li.dimensions) liRow.getCell(3).value = `${li.item || ''} (${li.dimensions})`;
+              if (li.extended) {
+                liRow.getCell(2).value = parseFloat(li.extended) || 0;
+                liRow.getCell(2).numFmt = currFmt;
+                liRow.getCell(2).alignment = { horizontal: 'right' };
+              }
+              applyGridBorders(liRow, 4);
+              r++;
+            });
+          }
+        });
+
+        // Services Subtotal
+        writeSubtotalRow(ws, r, 'Services Subtotal', aiQuote.services?.subtotal || 0);
+        r++;
+        r++; // separator
+
+        // ── 6. Totals section ──
+        if (aiQuote.contingency > 0) {
+          const row = ws.getRow(r);
+          row.getCell(1).value = 'Contingency';
+          row.getCell(1).font = { size: 11 };
+          row.getCell(2).value = aiQuote.contingency;
+          row.getCell(2).numFmt = currFmt;
+          row.getCell(2).alignment = { horizontal: 'right' };
+          applyGridBorders(row, 2);
+          r++;
         }
 
-        // Create workbook using SheetJS
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        // Subtotal before tax
+        const stRow = ws.getRow(r);
+        stRow.getCell(1).value = 'Subtotal before tax';
+        stRow.getCell(1).font = { bold: true, size: 11 };
+        stRow.getCell(2).value = aiQuote.subtotal_before_tax || 0;
+        stRow.getCell(2).numFmt = currFmt;
+        stRow.getCell(2).font = { bold: true, size: 11 };
+        stRow.getCell(2).alignment = { horizontal: 'right' };
+        for (let c = 1; c <= 8; c++) stRow.getCell(c).border = { top: thinBorder };
+        r++;
 
-        // Set column widths
-        ws['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 35 }, { wch: 8 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 10 }];
+        // Tax
+        const taxRow = ws.getRow(r);
+        taxRow.getCell(1).value = `Tax (${((aiQuote.tax_rate || 0) * 100).toFixed(2)}%)`;
+        taxRow.getCell(1).font = { size: 11 };
+        taxRow.getCell(2).value = aiQuote.tax_amount || 0;
+        taxRow.getCell(2).numFmt = currFmt;
+        taxRow.getCell(2).alignment = { horizontal: 'right' };
+        applyGridBorders(taxRow, 2);
+        r++;
 
-        XLSX.utils.book_append_sheet(wb, ws, 'Quote');
+        // ── TOTAL row ──
+        const totalRow = ws.getRow(r);
+        totalRow.height = 35;
+        totalRow.getCell(1).value = 'TOTAL';
+        totalRow.getCell(1).font = { bold: true, size: 16, color: { argb: C.white } };
+        totalRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+        totalRow.getCell(2).value = aiQuote.total || 0;
+        totalRow.getCell(2).numFmt = currFmt;
+        totalRow.getCell(2).font = { bold: true, size: 16, color: { argb: C.white } };
+        totalRow.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
+        for (let c = 1; c <= 8; c++) {
+          totalRow.getCell(c).fill = fillSolid(C.darkBg);
+          totalRow.getCell(c).border = { top: { style: 'thick' }, bottom: { style: 'thick' }, left: { style: 'thick' }, right: { style: 'thick' } };
+        }
+        r++;
 
-        // Download as Excel file
-        XLSX.writeFile(wb, `boothiq-quote-${new Date().toISOString().split('T')[0]}.xlsx`);
+        // ── 7. Notes ──
+        if (aiQuote.notes?.length > 0) {
+          r++; // separator
+          writeSectionHeader(ws, r, 'NOTES & ASSUMPTIONS');
+          // Override to yellow style
+          ws.getCell(r, 1).font = { bold: true, size: 11, color: { argb: C.yellowText } };
+          ws.getCell(r, 1).fill = fillSolid(C.yellowBg);
+          r++;
+
+          aiQuote.notes.forEach(note => {
+            ws.mergeCells(r, 1, r, 8);
+            const noteCell = ws.getCell(r, 1);
+            noteCell.value = `• ${note}`;
+            noteCell.font = { size: 10, italic: true, color: { argb: C.yellowText } };
+            noteCell.fill = fillSolid(C.yellowBg);
+            noteCell.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+            noteCell.border = { bottom: thinBorder };
+            ws.getRow(r).height = 22;
+            r++;
+          });
+        }
+
+        // ── Freeze panes & print ──
+        ws.views = [{ state: 'frozen', ySplit: matHeaderRow, xSplit: 0 }];
+        ws.pageSetup.printArea = `A1:H${r - 1}`;
+
+        // ── Generate and download ──
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `boothiq-quote-${new Date().toISOString().split('T')[0]}.xlsx`;
+        link.click();
+        window.URL.revokeObjectURL(url);
       };
 
       return (
@@ -1912,7 +2192,7 @@ Provide a complete quote with materials breakdown, services (design/PM, install/
               </div>
 
               <button className="btn-secondary" onClick={downloadQuote} style={{ marginTop: 24 }}>
-                Download Quote
+                Download Excel (.xlsx)
               </button>
 
               {/* ── Chat Panel ── */}
