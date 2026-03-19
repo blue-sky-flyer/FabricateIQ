@@ -114,6 +114,7 @@ export function useFileUpload(updateEstimates) {
         updateEstimates(extracted);
       }
     } catch (err) {
+      console.error('[handleFileUpload] Analysis failed for', file.name, err);
       setFiles(prev => prev.map(f =>
         f.id === id ? { ...f, analyzing: false, error: err.message } : f
       ));
@@ -123,15 +124,15 @@ export function useFileUpload(updateEstimates) {
   const handleMultipleFiles = async (fileList) => {
     const incoming = Array.from(fileList);
     const available = MAX_FILES - files.length;
-    const toProcess = incoming.slice(0, available);
 
-    if (toProcess.length < incoming.length) {
-      throw new Error(
-        available === 0
-          ? `Maximum ${MAX_FILES} files already uploaded.`
-          : `Only ${toProcess.length} file(s) added — maximum ${MAX_FILES} total.`
-      );
+    console.log('[handleMultipleFiles]', { filesInState: files.length, incoming: incoming.length, available });
+
+    if (available === 0) {
+      throw new Error(`Maximum ${MAX_FILES} files already uploaded.`);
     }
+
+    const toProcess = incoming.slice(0, available);
+    const dropped = incoming.length - toProcess.length;
 
     const errors = [];
     for (const file of toProcess) {
@@ -140,6 +141,14 @@ export function useFileUpload(updateEstimates) {
       } catch (err) {
         errors.push(err.message);
       }
+    }
+
+    if (dropped > 0) {
+      const msg = `${dropped} file(s) skipped — maximum ${MAX_FILES} total.`;
+      if (errors.length > 0) {
+        throw new Error([...errors, msg].join('; '));
+      }
+      throw new Error(msg);
     }
     if (errors.length > 0) {
       throw new Error(errors.join('; '));
