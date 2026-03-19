@@ -114,7 +114,6 @@ export function useFileUpload(updateEstimates) {
         updateEstimates(extracted);
       }
     } catch (err) {
-      alert('Upload error for ' + file.name + ': ' + err.message);
       setFiles(prev => prev.map(f =>
         f.id === id ? { ...f, analyzing: false, error: err.message } : f
       ));
@@ -124,8 +123,6 @@ export function useFileUpload(updateEstimates) {
   const handleMultipleFiles = async (fileList) => {
     const incoming = Array.from(fileList);
     const available = MAX_FILES - files.length;
-
-    console.log('[handleMultipleFiles]', { filesInState: files.length, incoming: incoming.length, available });
 
     if (available === 0) {
       throw new Error(`Maximum ${MAX_FILES} files already uploaded.`);
