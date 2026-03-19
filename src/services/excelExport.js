@@ -5,7 +5,7 @@ const C = {
   darkBg: 'FF2C2C2E', white: 'FFFFFFFF', lightGray: 'FFF5F5F7',
   lightBlue: 'FFE3F2FD', medGray: 'FF86868B', primaryDark: 'FF1D1D1F',
   yellowBg: 'FFFFFBEB', yellowText: 'FF92400E',
-  greenBg: 'FFE8F5E9', green: 'FF34C759',
+  greenBg: 'FFE8F5E9', green: 'FF34C759', greenDark: 'FF2E7D32',
   orangeBg: 'FFFFF3E0', orange: 'FFFF9500',
   redBg: 'FFFFEBEE', red: 'FFFF3B30',
   gridLine: 'FFE0E0E0'
@@ -342,9 +342,250 @@ function addSummarySection(ws, startRow, quote) {
 }
 
 /**
+ * Add sustainability enhancements as a separate worksheet tab.
+ */
+function addSustainabilityWorksheet(workbook, sustainabilityData) {
+  const { enhancements, summary } = sustainabilityData;
+  const COLS = 9;
+
+  const ws = workbook.addWorksheet('Sustainability Enhancements', {
+    pageSetup: {
+      fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+      paperSize: 9, orientation: 'landscape',
+      margins: { left: 0.5, right: 0.5, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 }
+    }
+  });
+
+  ws.columns = [
+    { width: 15 }, { width: 25 }, { width: 13 }, { width: 30 },
+    { width: 13 }, { width: 13 }, { width: 10 }, { width: 10 }, { width: 35 }
+  ];
+
+  let r = 1;
+
+  // Title
+  ws.mergeCells(r, 1, r, COLS);
+  const titleCell = ws.getCell(r, 1);
+  titleCell.value = 'Sustainability Enhancements';
+  titleCell.font = { bold: true, size: 18, color: { argb: C.white } };
+  titleCell.fill = fillSolid(C.greenDark);
+  titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  titleCell.border = { top: MED_BORDER, bottom: MED_BORDER, left: MED_BORDER, right: MED_BORDER };
+  ws.getRow(r).height = 36;
+  r++;
+
+  // Subtitle
+  ws.mergeCells(r, 1, r, COLS);
+  ws.getCell(r, 1).value = 'Recommended material alternatives for reduced environmental impact';
+  ws.getCell(r, 1).font = { italic: true, size: 11, color: { argb: C.medGray } };
+  ws.getCell(r, 1).alignment = { horizontal: 'center' };
+  r++;
+
+  // Generated date
+  ws.getCell(r, 1).value = 'Generated';
+  ws.getCell(r, 1).font = { color: { argb: C.medGray } };
+  ws.getCell(r, 2).value = new Date().toLocaleDateString();
+  r += 2;
+
+  // Summary section
+  ws.mergeCells(r, 1, r, COLS);
+  const summaryHeader = ws.getCell(r, 1);
+  summaryHeader.value = 'COST IMPACT SUMMARY';
+  summaryHeader.font = { bold: true, size: 12, color: { argb: C.white } };
+  summaryHeader.fill = fillSolid(C.greenDark);
+  summaryHeader.alignment = { horizontal: 'center', vertical: 'middle' };
+  summaryHeader.border = { top: MED_BORDER, bottom: MED_BORDER, left: MED_BORDER, right: MED_BORDER };
+  ws.getRow(r).height = 24;
+  r++;
+
+  if (summary) {
+    const summaryRows = [
+      ['Original Materials Total', summary.total_original || 0],
+      ['Suggested Sustainable Total', summary.total_suggested || 0],
+      ['Net Cost Impact', summary.net_cost_delta || 0],
+    ];
+
+    summaryRows.forEach((row, i) => {
+      ws.getCell(r, 1).value = row[0];
+      ws.getCell(r, 1).font = { bold: i === 2, size: 11 };
+      ws.getCell(r, 2).value = row[1];
+      ws.getCell(r, 2).numFmt = CURRENCY_FORMAT;
+      ws.getCell(r, 2).font = { bold: i === 2, size: 11, color: i === 2 ? { argb: row[1] <= 0 ? C.green : C.orange } : {} };
+      ws.getCell(r, 2).alignment = { horizontal: 'right' };
+      if (i % 2 === 0) {
+        ws.getCell(r, 1).fill = fillSolid(C.greenBg);
+        ws.getCell(r, 2).fill = fillSolid(C.greenBg);
+      }
+      applyGridBorders(ws.getRow(r), 2);
+      r++;
+    });
+
+    // Net % change
+    ws.getCell(r, 1).value = 'Net % Change';
+    ws.getCell(r, 1).font = { bold: true, size: 11 };
+    const pct = summary.net_cost_delta_percent || 0;
+    ws.getCell(r, 2).value = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+    ws.getCell(r, 2).font = { bold: true, size: 11, color: { argb: pct <= 0 ? C.green : C.orange } };
+    ws.getCell(r, 2).alignment = { horizontal: 'right' };
+    ws.getCell(r, 1).fill = fillSolid(C.greenBg);
+    ws.getCell(r, 2).fill = fillSolid(C.greenBg);
+    applyGridBorders(ws.getRow(r), 2);
+    r += 2;
+  }
+
+  // Enhancement table headers
+  ws.mergeCells(r, 1, r, COLS);
+  const tableHeader = ws.getCell(r, 1);
+  tableHeader.value = 'ENHANCEMENT DETAILS';
+  tableHeader.font = { bold: true, size: 12, color: { argb: C.white } };
+  tableHeader.fill = fillSolid(C.greenDark);
+  tableHeader.alignment = { horizontal: 'center', vertical: 'middle' };
+  tableHeader.border = { top: MED_BORDER, bottom: MED_BORDER, left: MED_BORDER, right: MED_BORDER };
+  ws.getRow(r).height = 24;
+  r++;
+
+  const colHeaders = ['Category', 'Original Item', 'Original Cost', 'Suggested Alternative', 'New Cost', 'Cost Delta', '% Change', 'Impact', 'Notes'];
+  const headerRow = r;
+  colHeaders.forEach((h, i) => {
+    const cell = ws.getCell(r, i + 1);
+    cell.value = h;
+    cell.font = { bold: true, size: 10, color: { argb: C.primaryDark } };
+    cell.fill = fillSolid(C.greenBg);
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = { bottom: MED_BORDER, top: THIN_BORDER, left: THIN_BORDER, right: THIN_BORDER };
+  });
+  r++;
+
+  // Category labels for display
+  const categoryLabels = {
+    walls: 'Walls/Fabrication',
+    flooring: 'Flooring',
+    graphics: 'Graphics/Signage',
+    furniture: 'Furniture',
+    av_lighting: 'AV/Lighting',
+    other: 'Other',
+    operations: 'Operations'
+  };
+
+  // Group enhancements by category
+  const grouped = {};
+  for (const enh of enhancements) {
+    const cat = enh.category || 'other';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(enh);
+  }
+
+  // Display categories in consistent order
+  const categoryOrder = ['walls', 'flooring', 'graphics', 'furniture', 'av_lighting', 'other', 'operations'];
+  const orderedCats = categoryOrder.filter(cat => grouped[cat]);
+
+  for (const cat of orderedCats) {
+    const items = grouped[cat];
+
+    for (const enh of items) {
+      const row = ws.getRow(r);
+      const isSaving = (enh.cost_delta || 0) < 0;
+      const rowBg = isSaving ? C.greenBg : C.orangeBg;
+
+      // Category
+      row.getCell(1).value = categoryLabels[cat] || cat;
+      row.getCell(1).font = { bold: true, size: 10 };
+
+      // Original item
+      row.getCell(2).value = enh.original_item || '';
+      row.getCell(2).font = { size: 10 };
+
+      // Original cost
+      row.getCell(3).value = enh.original_cost || 0;
+      row.getCell(3).numFmt = CURRENCY_FORMAT;
+      row.getCell(3).alignment = { horizontal: 'right' };
+
+      // Suggested alternative
+      row.getCell(4).value = enh.suggested_item || '';
+      row.getCell(4).font = { size: 10 };
+
+      // New cost
+      row.getCell(5).value = enh.suggested_cost || 0;
+      row.getCell(5).numFmt = CURRENCY_FORMAT;
+      row.getCell(5).alignment = { horizontal: 'right' };
+
+      // Cost delta
+      row.getCell(6).value = enh.cost_delta || 0;
+      row.getCell(6).numFmt = CURRENCY_FORMAT;
+      row.getCell(6).alignment = { horizontal: 'right' };
+      row.getCell(6).font = { size: 10, color: { argb: isSaving ? C.green : C.orange } };
+
+      // % change
+      const deltaP = parseFloat(enh.cost_delta_percent) || 0;
+      row.getCell(7).value = `${deltaP >= 0 ? '+' : ''}${deltaP.toFixed(1)}%`;
+      row.getCell(7).alignment = { horizontal: 'center' };
+      row.getCell(7).font = { size: 10, color: { argb: isSaving ? C.green : C.orange } };
+
+      // Impact
+      const impact = (enh.environmental_impact || '').toUpperCase();
+      const impactCell = row.getCell(8);
+      impactCell.value = impact;
+      impactCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      impactCell.font = { bold: true, size: 9, color: { argb: impact === 'HIGH' ? C.green : impact === 'MEDIUM' ? C.orange : C.medGray } };
+
+      // Notes
+      row.getCell(9).value = enh.notes || '';
+      row.getCell(9).font = { size: 9, color: { argb: C.medGray } };
+      row.getCell(9).alignment = { wrapText: true };
+
+      // Row styling
+      for (let c = 1; c <= COLS; c++) {
+        row.getCell(c).fill = fillSolid(rowBg);
+      }
+      applyGridBorders(row, COLS);
+      ws.getRow(r).height = 22;
+      r++;
+    }
+  }
+
+  r++;
+
+  // Top impact items
+  if (summary?.top_impact_items?.length > 0) {
+    ws.mergeCells(r, 1, r, COLS);
+    const topHeader = ws.getCell(r, 1);
+    topHeader.value = 'TOP IMPACT ITEMS';
+    topHeader.font = { bold: true, size: 11, color: { argb: C.greenDark } };
+    topHeader.fill = fillSolid(C.greenBg);
+    topHeader.border = { top: MED_BORDER, bottom: THIN_BORDER };
+    r++;
+
+    for (const item of summary.top_impact_items) {
+      ws.mergeCells(r, 1, r, COLS);
+      const itemCell = ws.getCell(r, 1);
+      itemCell.value = `\u2022 ${item}`;
+      itemCell.font = { size: 10, color: { argb: C.greenDark } };
+      itemCell.fill = fillSolid(C.greenBg);
+      itemCell.alignment = { horizontal: 'left', wrapText: true };
+      itemCell.border = { bottom: THIN_BORDER };
+      ws.getRow(r).height = 20;
+      r++;
+    }
+  }
+
+  r++;
+
+  // Disclaimer
+  ws.mergeCells(r, 1, r, COLS);
+  const disclaimer = ws.getCell(r, 1);
+  disclaimer.value = 'Note: Sustainability alternatives are estimated based on industry data and the Mosaic Sustainability Guide. Actual pricing may vary based on supplier and availability.';
+  disclaimer.font = { italic: true, size: 9, color: { argb: C.medGray } };
+  disclaimer.alignment = { horizontal: 'left', wrapText: true };
+  ws.getRow(r).height = 30;
+
+  // Freeze panes at header row
+  ws.views = [{ state: 'frozen', ySplit: headerRow, xSplit: 0 }];
+}
+
+/**
  * Generate and download an Excel quote.
  */
-export async function downloadQuote(quote, { width, length, location, duration, getCurrency }) {
+export async function downloadQuote(quote, { width, length, location, duration, getCurrency, sustainabilityData }) {
   const specs = quote.booth_specs || {};
   const displaySpecs = {
     dimensions: specs.dimensions || `${width}ft x ${length}ft`,
@@ -377,6 +618,10 @@ export async function downloadQuote(quote, { width, length, location, duration, 
 
   ws.views = [{ state: 'frozen', ySplit: headerRow, xSplit: 0 }];
   ws.pageSetup.printArea = `A1:H${r - 1}`;
+
+  if (sustainabilityData?.enhancements?.length > 0) {
+    addSustainabilityWorksheet(workbook, sustainabilityData);
+  }
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

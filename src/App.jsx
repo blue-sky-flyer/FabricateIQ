@@ -50,12 +50,16 @@ export default function App() {
 
   const handleDownload = async () => {
     try {
+      const sustainabilityData = aiQuote?.sustainability_enhancements?.length > 0
+        ? { enhancements: aiQuote.sustainability_enhancements, summary: aiQuote.sustainability_summary }
+        : null;
       await downloadQuote(aiQuote, {
         width: form.width,
         length: form.length,
         location: form.location,
         duration: form.duration,
-        getCurrency: form.getCurrency
+        getCurrency: form.getCurrency,
+        sustainabilityData
       });
     } catch (err) {
       setError('Download failed: ' + err.message);
