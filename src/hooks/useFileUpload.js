@@ -6,7 +6,7 @@ const MAX_FILES = 3;
 /**
  * Resize image if larger than maxSizeBytes (Claude 5MB limit).
  */
-function resizeImageIfNeeded(file, maxSizeBytes = 4.5 * 1024 * 1024) {
+function resizeImageIfNeeded(file, maxSizeBytes = 3 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (event) => {
