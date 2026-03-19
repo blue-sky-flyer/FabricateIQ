@@ -38,8 +38,8 @@ export default {
     const authResponse = authenticateRequest(request, env, corsHeaders);
     if (authResponse) return authResponse;
 
-    // Body size check
-    const sizeResponse = validateBodySize(request, corsHeaders);
+    // Body size check (7MB to accommodate base64 image payloads)
+    const sizeResponse = validateBodySize(request, corsHeaders, 7_000_000);
     if (sizeResponse) return sizeResponse;
 
     try {

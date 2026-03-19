@@ -231,6 +231,124 @@ input:disabled, select:disabled, button:disabled {
   margin-bottom: 4px;
 }
 
+/* File list (multi-file uploads) */
+.file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.file-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f5f5f7;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #1d1d1f;
+  max-width: 280px;
+}
+
+.file-thumbnail {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.file-thumbnail-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  width: 32px;
+  text-align: center;
+}
+
+.file-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-remove-btn {
+  background: none;
+  border: none;
+  color: #86868b;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 12px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.file-remove-btn:hover {
+  background: #e8e8ed;
+  color: #1d1d1f;
+}
+
+.file-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e8e8ed;
+  border-top-color: #0071e3;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.file-error {
+  color: #d70015;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* Description textarea */
+.description-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #d2d2d7;
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #1d1d1f;
+  background: #ffffff;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.description-input:focus {
+  outline: none;
+  border-color: #0071e3;
+  box-shadow: 0 0 0 4px rgba(0,113,227,0.1);
+}
+
+.description-input::placeholder {
+  color: #86868b;
+}
+
+/* Upload section layout */
+.upload-section {
+  margin-top: 32px;
+}
+
+.upload-clear-btn {
+  margin-top: 12px;
+  width: auto;
+  padding: 8px 16px;
+}
+
+.upload-description-group {
+  margin-top: 24px;
+}
+
 /* Primary CTA - Apple blue */
 .btn-primary {
   width: 100%;

@@ -1,10 +1,12 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { analyzeWithClaude } from '../services/api.js';
+
+const MAX_FILES = 3;
 
 /**
  * Resize image if larger than maxSizeBytes (Claude 5MB limit).
  */
-function resizeImageIfNeeded(file, maxSizeBytes = 4.5 * 1024 * 1024) {
+function resizeImageIfNeeded(file, maxSizeBytes = 3 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -56,66 +58,133 @@ async function extractPdfText(file) {
 }
 
 export function useFileUpload(updateEstimates) {
-  const [uploadedImage, setUploadedImage] = useState(null);
-  const [uploadedPDF, setUploadedPDF] = useState(null);
-  const [pdfText, setPdfText] = useState('');
-  const [analyzing, setAnalyzing] = useState(false);
+  const [files, setFiles] = useState([]);
+  const [description, setDescription] = useState('');
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleImageUpload = async (file) => {
+  const allPdfText = useMemo(() =>
+    files
+      .filter(f => f.pdfText)
+      .map(f => `--- ${f.name} ---\n${f.pdfText}`)
+      .join('\n\n'),
+    [files]
+  );
+
+  const hasFiles = files.length > 0;
+  const anyAnalyzing = files.some(f => f.analyzing);
+  const hasPdfText = files.some(f => f.pdfText);
+  const canAddMore = files.length < MAX_FILES;
+
+  const handleFileUpload = async (file) => {
     if (!file) return;
-    setAnalyzing(true);
-    setUploadedImage(URL.createObjectURL(file));
+
+    if (file.type !== 'application/pdf' && !file.type.startsWith('image/')) {
+      throw new Error('Please upload an image (JPG, PNG) or PDF file');
+    }
+
+    const id = crypto.randomUUID();
+    const isImage = file.type.startsWith('image/');
+    const entry = {
+      id,
+      name: file.name,
+      type: isImage ? 'image' : 'pdf',
+      previewUrl: isImage ? URL.createObjectURL(file) : null,
+      pdfText: null,
+      analyzing: true,
+      error: null
+    };
+
+    setFiles(prev => [...prev, entry]);
 
     try {
-      const { base64, mediaType } = await resizeImageIfNeeded(file);
-      const extracted = await analyzeWithClaude(base64, pdfText, mediaType);
-      updateEstimates(extracted);
-    } finally {
-      setAnalyzing(false);
+      if (isImage) {
+        const { base64, mediaType } = await resizeImageIfNeeded(file);
+        const extracted = await analyzeWithClaude(base64, null, mediaType);
+        setFiles(prev => prev.map(f =>
+          f.id === id ? { ...f, analyzing: false } : f
+        ));
+        updateEstimates(extracted);
+      } else {
+        const text = await extractPdfText(file);
+        const extracted = await analyzeWithClaude(null, text);
+        setFiles(prev => prev.map(f =>
+          f.id === id ? { ...f, pdfText: text, analyzing: false } : f
+        ));
+        updateEstimates(extracted);
+      }
+    } catch (err) {
+      setFiles(prev => prev.map(f =>
+        f.id === id ? { ...f, analyzing: false, error: err.message } : f
+      ));
     }
   };
 
-  const handlePdfUpload = async (file) => {
-    if (!file) return;
-    setAnalyzing(true);
-    setUploadedPDF(file.name);
+  const handleMultipleFiles = async (fileList) => {
+    const incoming = Array.from(fileList);
+    const available = MAX_FILES - files.length;
 
-    try {
-      const text = await extractPdfText(file);
-      setPdfText(text);
-      const extracted = await analyzeWithClaude(null, text);
-      updateEstimates(extracted);
-    } catch {
-      setUploadedPDF(null);
-      setPdfText('');
-      throw new Error('Error analyzing PDF');
-    } finally {
-      setAnalyzing(false);
+    if (available === 0) {
+      throw new Error(`Maximum ${MAX_FILES} files already uploaded.`);
+    }
+
+    const toProcess = incoming.slice(0, available);
+    const dropped = incoming.length - toProcess.length;
+
+    const errors = [];
+    for (const file of toProcess) {
+      try {
+        await handleFileUpload(file);
+      } catch (err) {
+        errors.push(err.message);
+      }
+    }
+
+    if (dropped > 0) {
+      const msg = `${dropped} file(s) skipped — maximum ${MAX_FILES} total.`;
+      if (errors.length > 0) {
+        throw new Error([...errors, msg].join('; '));
+      }
+      throw new Error(msg);
+    }
+    if (errors.length > 0) {
+      throw new Error(errors.join('; '));
     }
   };
 
-  const handleFileUpload = (file) => {
-    if (!file) return;
-    if (file.type === 'application/pdf') return handlePdfUpload(file);
-    if (file.type.startsWith('image/')) return handleImageUpload(file);
-    throw new Error('Please upload an image (JPG, PNG) or PDF file');
+  const removeFile = (id) => {
+    setFiles(prev => {
+      const target = prev.find(f => f.id === id);
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter(f => f.id !== id);
+    });
   };
 
-  const clearPdf = () => {
-    setUploadedPDF(null);
-    setPdfText('');
+  const clearAll = () => {
+    files.forEach(f => {
+      if (f.previewUrl) URL.revokeObjectURL(f.previewUrl);
+    });
+    setFiles([]);
+    setDescription('');
   };
 
   return {
-    uploadedImage,
-    uploadedPDF,
-    pdfText,
-    analyzing,
-    dragging, setDragging,
+    files,
+    description,
+    setDescription,
+    dragging,
+    setDragging,
     fileInputRef,
     handleFileUpload,
-    clearPdf
+    handleMultipleFiles,
+    removeFile,
+    clearAll,
+    allPdfText,
+    hasFiles,
+    anyAnalyzing,
+    hasPdfText,
+    canAddMore
   };
 }

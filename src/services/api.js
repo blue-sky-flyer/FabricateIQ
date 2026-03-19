@@ -101,7 +101,11 @@ export async function fetchChatResponse(currentQuote, message, conversationHisto
  * Build the quote prompt from form values or PDF text.
  * Returns { promptText, wasTruncated }.
  */
-export function buildQuotePrompt({ pdfText, width, length, location, indoor, duration, groundLevel, getCurrency }) {
+export function buildQuotePrompt({ pdfText, description, width, length, location, indoor, duration, groundLevel, getCurrency }) {
+  const descriptionBlock = description
+    ? `\n\nUSER CONTEXT:\nThe user provided the following description of these files: ${description}`
+    : '';
+
   if (pdfText) {
     const truncatedText = pdfText.length > PDF_TEXT_LIMIT
       ? pdfText.substring(0, PDF_TEXT_LIMIT)
@@ -125,7 +129,7 @@ Instructions:
 5. The TOTAL should closely match the sum of line items from the PDF (plus tax if not included)
 
 Do NOT invent prices - use the actual line item costs from the PDF.
-Use the calibrated service ratios from SKILL.md only if specific service costs are not itemized in the PDF.`;
+Use the calibrated service ratios from SKILL.md only if specific service costs are not itemized in the PDF.${descriptionBlock}`;
 
     return { promptText, wasTruncated };
   }
@@ -144,7 +148,7 @@ Use the calibrated service ratios from SKILL.md only if specific service costs a
 - Duration: ${duration} days
 - Ground Level: ${ground}
 
-Provide a complete quote with materials breakdown, services (design/PM, install/dismantle, logistics), tax, and total. Use the calibrated service ratios from the SKILL.md for this project type.`;
+Provide a complete quote with materials breakdown, services (design/PM, install/dismantle, logistics), tax, and total. Use the calibrated service ratios from the SKILL.md for this project type.${descriptionBlock}`;
 
   return { promptText, wasTruncated: false };
 }
