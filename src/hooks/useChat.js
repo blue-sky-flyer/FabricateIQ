@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchChatResponse } from '../services/api.js';
+import { normalizeQuote } from './useQuote.js';
 
 export function useChat(aiQuote, setAiQuote, setQuoteVersions) {
   const [showChat, setShowChat] = useState(false);
@@ -38,9 +39,10 @@ export function useChat(aiQuote, setAiQuote, setQuoteVersions) {
 
       // Auto-apply unless it's a "what if"
       if (!data.whatIf && data.updatedQuote) {
-        setAiQuote(data.updatedQuote);
+        const normalized = normalizeQuote(data.updatedQuote);
+        setAiQuote(normalized);
         setQuoteVersions(prev => [...prev, {
-          quote: data.updatedQuote,
+          quote: normalized,
           label: data.changesSummary || msg.substring(0, 50)
         }]);
       }
@@ -58,9 +60,10 @@ export function useChat(aiQuote, setAiQuote, setQuoteVersions) {
   const applyWhatIf = (msgIndex) => {
     const msg = chatMessages[msgIndex];
     if (msg?.updatedQuote) {
-      setAiQuote(msg.updatedQuote);
+      const normalized = normalizeQuote(msg.updatedQuote);
+      setAiQuote(normalized);
       setQuoteVersions(prev => [...prev, {
-        quote: msg.updatedQuote,
+        quote: normalized,
         label: 'Applied what-if change'
       }]);
       setChatMessages(prev => prev.map((m, i) =>
