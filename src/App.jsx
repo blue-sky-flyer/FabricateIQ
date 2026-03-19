@@ -33,7 +33,8 @@ export default function App() {
     setError('');
     try {
       await getAIQuote({
-        pdfText: fileUpload.pdfText,
+        pdfText: fileUpload.allPdfText,
+        description: fileUpload.description,
         width: form.width,
         length: form.length,
         location: form.location,

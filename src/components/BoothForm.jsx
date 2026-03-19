@@ -2,7 +2,7 @@ import { DURATION_OPTIONS } from '../config/constants.js';
 
 export default function BoothForm({ form, fileUpload }) {
   const { location, setLocation, width, setWidth, length, setLength, indoor, setIndoor, duration, setDuration, groundLevel, setGroundLevel } = form;
-  const pdfDisabled = !!fileUpload.uploadedPDF;
+  const pdfDisabled = fileUpload.hasPdfText;
 
   return (
     <div className="card">
