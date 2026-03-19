@@ -114,7 +114,7 @@ export function useFileUpload(updateEstimates) {
         updateEstimates(extracted);
       }
     } catch (err) {
-      console.error('[handleFileUpload] Analysis failed for', file.name, err);
+      alert('Upload error for ' + file.name + ': ' + err.message);
       setFiles(prev => prev.map(f =>
         f.id === id ? { ...f, analyzing: false, error: err.message } : f
       ));
