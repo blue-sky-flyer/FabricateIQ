@@ -16,6 +16,7 @@ import {
 
 const SKILL_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/main/skills/quote-generator/SKILL.md';
 const CATALOG_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/main/MASTER_CATALOG.md';
+const SUSTAINABILITY_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/main/public/SUSTAINABILITY_GUIDE.md';
 
 // Line item schema used within materials and services
 const LINE_ITEM_SCHEMA = {
@@ -102,6 +103,37 @@ const QUOTE_SCHEMA = {
       type: "array",
       items: { type: "string" },
       description: "Important notes, assumptions, or caveats"
+    },
+    sustainability_enhancements: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          category: { type: "string", enum: ["walls", "flooring", "graphics", "furniture", "av_lighting", "other", "operations"], description: "Material category" },
+          original_item: { type: "string", description: "Current material/item from the quote" },
+          original_cost: { type: "number", description: "Current cost from the quote" },
+          suggested_item: { type: "string", description: "Sustainable alternative" },
+          suggested_cost: { type: "number", description: "Estimated cost of sustainable alternative" },
+          cost_delta: { type: "number", description: "Cost difference (positive = more expensive, negative = savings)" },
+          cost_delta_percent: { type: "number", description: "Percentage change from original" },
+          environmental_impact: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"], description: "Environmental benefit level" },
+          notes: { type: "string", description: "Why this is better and any trade-offs" },
+          confidence: { type: "string", enum: ["high", "medium", "low"], description: "Pricing confidence" }
+        },
+        required: ["category", "original_item", "original_cost", "suggested_item", "suggested_cost", "cost_delta", "environmental_impact"]
+      },
+      description: "Sustainable material alternatives with estimated cost impact"
+    },
+    sustainability_summary: {
+      type: "object",
+      properties: {
+        total_original: { type: "number", description: "Sum of original costs for items with alternatives" },
+        total_suggested: { type: "number", description: "Sum of suggested sustainable costs" },
+        net_cost_delta: { type: "number", description: "Net cost difference" },
+        net_cost_delta_percent: { type: "number", description: "Net percentage change" },
+        top_impact_items: { type: "array", items: { type: "string" }, description: "Most impactful sustainability changes" }
+      },
+      description: "Summary of sustainability cost impact"
     }
   },
   required: ["project_type", "materials", "services", "subtotal_before_tax", "tax_rate", "tax_amount", "total", "confidence"]
@@ -266,7 +298,9 @@ async function handleQuoteMode(body, systemInstruction, env) {
   "tax_amount": number,
   "total": number,
   "confidence": "high" | "medium" | "low",
-  "notes": ["string", ...]
+  "notes": ["string", ...],
+  "sustainability_enhancements": [{"category":"walls|flooring|graphics|furniture|av_lighting|other|operations","original_item":"string","original_cost":number,"suggested_item":"string","suggested_cost":number,"cost_delta":number,"cost_delta_percent":number,"environmental_impact":"HIGH|MEDIUM|LOW","notes":"string","confidence":"high|medium|low"}],
+  "sustainability_summary": {"total_original":number,"total_suggested":number,"net_cost_delta":number,"net_cost_delta_percent":number,"top_impact_items":["string"]}
 }
 CRITICAL RULES:
 1. Extract booth_specs from the PDF content - dimensions, square footage, location, event name.
@@ -274,7 +308,9 @@ CRITICAL RULES:
 3. For walls: itemize each wall section.
 4. For services: show percentage basis and calculation.
 5. For I&D: show crew count, hours/days, and implied rate if calculable.
-6. Use whole numbers for dollar amounts. No markdown, no explanation, just the JSON.`;
+6. Use whole numbers for dollar amounts. No markdown, no explanation, just the JSON.
+7. Include sustainability_enhancements: for each material line item, suggest a greener alternative with estimated cost delta using the SUSTAINABILITY GUIDE and MASTER_CATALOG pricing. Skip items with no viable alternative.
+8. Include sustainability_summary with totals and top_impact_items describing the most impactful changes.`;
     messages = messages.map((msg, i) =>
       i === lastMsgIndex ? { ...msg, content: msg.content + jsonInstructions } : msg
     );
@@ -289,7 +325,7 @@ CRITICAL RULES:
     generationConfig: {
       ...(isGemini3 ? {} : { responseMimeType: 'application/json', responseSchema: QUOTE_SCHEMA }),
       temperature: 0.1,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 6144,
       ...(isGemini3 && { thinkingConfig: { thinkingLevel: 'LOW' } })
     }
   };
@@ -349,10 +385,11 @@ export default {
     if (sizeResponse) return sizeResponse;
 
     try {
-      // Fetch SKILL.md and MASTER_CATALOG at runtime (with timeout)
-      const [skillRes, catalogRes] = await Promise.all([
+      // Fetch SKILL.md, MASTER_CATALOG, and SUSTAINABILITY_GUIDE at runtime (with timeout)
+      const [skillRes, catalogRes, sustainRes] = await Promise.all([
         fetchWithTimeout(SKILL_URL),
-        fetchWithTimeout(CATALOG_URL)
+        fetchWithTimeout(CATALOG_URL),
+        fetchWithTimeout(SUSTAINABILITY_URL).catch(() => ({ ok: false }))
       ]);
 
       if (!skillRes.ok || !catalogRes.ok) {
@@ -361,7 +398,8 @@ export default {
 
       const skillContent = await skillRes.text();
       const catalogContent = await catalogRes.text();
-      const systemInstruction = `${skillContent}\n\n---\n\n# REFERENCE DATA\n${catalogContent}`;
+      const sustainContent = sustainRes?.ok ? await sustainRes.text() : '';
+      const systemInstruction = `${skillContent}\n\n---\n\n# REFERENCE DATA\n${catalogContent}${sustainContent ? `\n\n---\n\n# SUSTAINABILITY GUIDE\n${sustainContent}` : ''}`;
 
       const body = await request.json();
 
