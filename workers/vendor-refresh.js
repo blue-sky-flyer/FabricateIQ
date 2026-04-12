@@ -5,6 +5,16 @@
  * 1. Scheduled cron (every 3 months): refreshes vendor data in KV by calling Claude API
  * 2. GET /vendors?city=<location_key>: returns vendor data for a city (from KV or seed)
  *
+ * Model: all vendors listed are LOCAL companies in the target city that can execute
+ * the full project (design, fabrication, I&D, rentals). These are PTNR-equivalent
+ * companies in each market — not subcontractors for Toronto-outbound work.
+ *
+ * Vendor categories (aligned with user's 4 requested types):
+ *   - Exhibit Fabricators / Builders — custom build, full-service (PTNR equivalents)
+ *   - Rental Companies — modular systems, furniture, flooring, AV
+ *   - Graphics / Print Shops — large-format printing for booth graphics
+ *   - General Contractors / I&D Labor — assembly and dismantle crews
+ *
  * KV bindings: VENDOR_KV
  * Secrets: ANTHROPIC_API_KEY, WORKER_AUTH_TOKEN
  */
@@ -17,349 +27,330 @@ import { handleCors, verifyAuth, sanitizeError } from './middleware.js';
 // ---------------------------------------------------------------------------
 const VENDOR_SEED = {
   toronto: {
-    'I&D Contractors': [
-      { name: 'PTNR Production Inc', specialty: 'Full-service exhibit fabrication & I&D', website: 'ptnrproduction.com', notes: 'Primary vendor — Toronto home base', union: 'Non-union' },
-      { name: 'Nimlok Toronto', specialty: 'Modular exhibit installation', website: 'nimlok.ca', notes: 'Established exhibit house', union: 'Non-union' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'PTNR Production Inc', specialty: 'Custom trade show fabrication, experiential activations', website: 'ptnrproduction.com', notes: 'Home base — primary vendor for all Toronto work', union: 'Non-union' },
+      { name: 'Nimlok Toronto', specialty: 'Modular and custom exhibit design & build', website: 'nimlok.ca', notes: 'Full-service exhibit house', union: 'Non-union' },
+      { name: 'Derse', specialty: 'Custom exhibit design and lifecycle management', website: 'derse.com', notes: 'Large-scale custom builds', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Derse', specialty: 'Custom exhibit design & build', website: 'derse.com', notes: 'Full lifecycle exhibit management', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'Freeman', specialty: 'Modular systems, furniture, flooring rentals', website: 'freemanco.com', notes: 'National provider; large rental inventory', union: 'Non-union' },
+      { name: 'CORT Events', specialty: 'Event furniture and accessories', website: 'cortevents.com', notes: 'Wide furniture selection; national coverage', union: 'Non-union' },
     ],
-    'Graphics / Print': [
-      { name: 'Pixel Graphics', specialty: 'Large-format printing, SEG fabric', website: 'pixelgraphics.ca', notes: 'Trade show specialist', union: 'Non-union' },
+    'Graphics / Print Shops': [
+      { name: 'Pixel Graphics', specialty: 'Large-format printing, SEG fabric, vinyl wraps', website: 'pixelgraphics.ca', notes: 'Trade show specialist; fast turnaround', union: 'Non-union' },
+      { name: 'SpeedPro Toronto', specialty: 'Banners, backdrops, floor graphics', website: 'speedpro.com', notes: 'National franchise', union: 'Non-union' },
     ],
-    'AV / Lighting': [
-      { name: 'Freeman AV Canada', specialty: 'AV rentals, LED walls, staging', website: 'freemanco.com', notes: 'National provider', union: 'Non-union' },
-    ],
-    'Furniture Rental': [
-      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture nationwide', website: 'afrtradeshow.com', notes: 'National coverage', union: 'Non-union' },
+    'General Contractors / I&D Labor': [
+      { name: 'PTNR Production Inc', specialty: 'Install and dismantle crew — all Toronto shows', website: 'ptnrproduction.com', notes: 'In-house crew', union: 'Non-union' },
+      { name: 'Complete Crewing Inc.', specialty: 'Union-capable installation crews', website: 'completecrewing.com', notes: 'For union venue requirements', union: 'Union-signatory' },
     ],
   },
   montreal: {
-    'I&D Contractors': [
-      { name: 'CoMotion Exhibits', specialty: 'Full-service design, fabrication, installation', website: 'comotioneventsinc.com', notes: 'Serves Toronto, Montreal, Vancouver', union: 'Non-union' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Evo Exhibits', specialty: 'Custom exhibits, modular systems, full turnkey', website: 'evoexhibits.com', notes: 'Montreal-based full-service exhibit builder', union: 'Non-union' },
+      { name: 'CoMotion Exhibits Events Inc', specialty: 'Custom exhibits, fabrication, installation', website: 'comotioneventsinc.com', notes: 'Serves Montreal, Toronto, Vancouver', union: 'Non-union' },
+      { name: 'Beaumont Exhibits', specialty: 'Turnkey exhibit design and production', website: 'beaumontandco.ca', notes: '20+ years; multi-city capability', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Evo Exhibits', specialty: 'Custom exhibits, modular systems', website: 'evoexhibits.com', notes: 'Montreal-based builder', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'Freeman Canada', specialty: 'Modular displays, furniture, flooring rentals', website: 'freemanco.com', notes: 'National provider; serves Montreal shows', union: 'Varies by venue' },
+      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture rentals', website: 'afrtradeshow.com', notes: 'National coverage', union: 'Non-union' },
     ],
-    'Graphics / Print': [
-      { name: 'Transcontinental Printing', specialty: 'Large-format printing', website: 'transcontinental.com', notes: 'National print provider', union: 'Non-union' },
+    'Graphics / Print Shops': [
+      { name: 'Transcontinental Printing', specialty: 'Large-format, trade show graphics, signage', website: 'transcontinental.com', notes: 'National print provider with Montreal facilities', union: 'Non-union' },
+      { name: 'SpeedPro Montreal', specialty: 'Banners, vinyl wraps, booth graphics', website: 'speedpro.com', notes: 'National franchise; fast turnaround', union: 'Non-union' },
     ],
-    'AV / Lighting': [
-      { name: 'Freeman AV Canada', specialty: 'AV rentals, LED walls', website: 'freemanco.com', notes: 'National provider', union: 'Non-union' },
-    ],
-    'Furniture Rental': [
-      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture', website: 'afrtradeshow.com', notes: 'National coverage', union: 'Non-union' },
+    'General Contractors / I&D Labor': [
+      { name: 'GES Canada', specialty: 'General contractor for Montreal trade shows', website: 'ges.com', notes: 'National GC; Quebec shows specialist', union: 'Union at Palais des congrès' },
+      { name: 'Freeman Canada', specialty: 'Official GC services, installation labor', website: 'freemanco.com', notes: 'Large national GC', union: 'Union at major venues' },
     ],
   },
   vancouver: {
-    'I&D Contractors': [
-      { name: 'Whistler Show Services', specialty: 'Installation & dismantle labor, Vancouver CC', website: 'whistlershowservices.com', notes: 'Official EAC at VCC', union: 'Union (BC Building Trades)' },
-      { name: 'CoMotion Exhibits', specialty: 'Full-service exhibits, fabrication', website: 'comotioneventsinc.com', notes: 'Serves Vancouver, Toronto, Montreal', union: 'Non-union' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Müller Expo', specialty: 'Custom booth design, fabrication, installation', website: 'mullerexpo.com', notes: 'Vancouver production facility; full-service', union: 'Non-union' },
+      { name: 'Beaumont Exhibits', specialty: 'Turnkey exhibit solutions, design & fabrication', website: 'beaumontandco.ca', notes: '20+ years; Vancouver-based', union: 'Non-union' },
+      { name: 'MJY Fabrication', specialty: 'Custom trade show exhibit builds, design to install', website: 'mjyfabrication.com', notes: 'Local Vancouver fabricator', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Müller Expo', specialty: 'Custom booth design, fabrication, installation', website: 'mullerexpo.com', notes: 'Production facility in Vancouver', union: 'Non-union' },
-      { name: 'Beaumont Exhibits', specialty: 'Turnkey exhibit solutions', website: 'beaumontandco.ca', notes: '20+ years experience', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'Freeman Canada', specialty: 'Modular systems, furniture, flooring rentals', website: 'freemanco.com', notes: 'Serves Vancouver Convention Centre', union: 'Union at VCC' },
+      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture', website: 'afrtradeshow.com', notes: 'National coverage', union: 'Non-union' },
     ],
-    'Graphics / Print': [
-      { name: 'SpeedPro Vancouver', specialty: 'Large-format printing, trade show graphics', website: 'speedpro.com', notes: 'National franchise, fast turnaround', union: 'Non-union' },
+    'Graphics / Print Shops': [
+      { name: 'SpeedPro Vancouver', specialty: 'Large-format printing, trade show graphics', website: 'speedpro.com', notes: 'National franchise; fast turnaround', union: 'Non-union' },
+      { name: 'ColorBurst Graphics', specialty: 'Trade show banners, backlit displays, vinyl wraps', website: 'colorburstgraphics.ca', notes: 'Vancouver trade show specialist', union: 'Non-union' },
     ],
-    'AV / Lighting': [
-      { name: 'Freeman AV Canada', specialty: 'AV rentals, LED walls, staging', website: 'freemanco.com', notes: 'Serves Vancouver CC', union: 'Union' },
-    ],
-    'Furniture Rental': [
-      { name: 'Courtney Agencies', specialty: 'Customs, freight, drayage — VCC specialist', website: 'courtney.ca', notes: '65+ years, cross-border logistics', union: 'Union-affiliated' },
+    'General Contractors / I&D Labor': [
+      { name: 'Whistler Show Services', specialty: 'Installation & dismantle labor — VCC specialist', website: 'whistlershowservices.com', notes: 'Official EAC at Vancouver Convention Centre', union: 'Union (BC Building Trades)' },
+      { name: 'GES Canada', specialty: 'General contractor for Vancouver shows', website: 'ges.com', notes: 'National GC; VCC experience', union: 'Union at VCC' },
     ],
   },
   new_york: {
-    'I&D Contractors': [
-      { name: 'Expo Event Services', specialty: 'Labor, furniture, freight handling, on-site mgmt', website: 'expoeventservices.com', notes: 'Javits Center specialist', union: 'Union (Teamsters/Carpenters/IBEW)' },
-      { name: 'Freeman', specialty: 'Official general contractor — Javits Center', website: 'freemanco.com', notes: 'Exclusive material handling at many shows', union: 'Union' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Zumizo International', specialty: 'Custom trade show booths, design to install', website: 'zumizointernational.com', notes: '2 decades NYC experience; full-service', union: 'Non-union' },
+      { name: 'Sparks', specialty: 'Large custom exhibits, brand environments', website: 'wearesparks.com', notes: 'Major full-service exhibit house; NYC/NJ', union: 'Non-union' },
+      { name: 'Highmark Tech', specialty: 'Custom & modular exhibit design and build', website: 'highmarktech.com', notes: 'NYC area exhibit builder', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Zumizo International', specialty: 'Custom trade show booths, 2 decades NYC', website: 'zumizointernational.com', notes: 'Full design-to-install service', union: 'Non-union' },
-      { name: 'Iconic Displays', specialty: 'Display systems, rentals, I&D', website: 'iconicdisplays.com', notes: 'Multiple NYC area offices', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'Exponents', specialty: 'Booth rentals, modular systems, furniture, flooring', website: 'exponents.com', notes: 'Nationwide rental network; Javits specialist', union: 'Non-union' },
+      { name: 'CORT Events', specialty: 'Event furniture rentals', website: 'cortevents.com', notes: 'Large NYC inventory', union: 'Non-union' },
+      { name: 'Iconic Displays', specialty: 'Display system rentals, modular hardware', website: 'iconicdisplays.com', notes: 'Multiple NYC-area offices', union: 'Non-union' },
     ],
-    'Graphics / Print': [
-      { name: 'Mega Format NYC', specialty: 'Trade show banners, vinyl, large format', website: 'megaformat.net', notes: 'Brooklyn location; wide material options', union: 'Non-union' },
-      { name: 'Color X', specialty: 'Large format, custom fabrication, floor graphics', website: 'color-x.com', notes: 'Retail & trade show displays', union: 'Non-union' },
+    'Graphics / Print Shops': [
+      { name: 'Mega Format NYC', specialty: 'Trade show banners, vinyl wraps, large format', website: 'megaformat.net', notes: 'Brooklyn location; wide material options; rush services', union: 'Non-union' },
+      { name: 'Color X', specialty: 'Large format, floor graphics, window displays', website: 'color-x.com', notes: 'Custom fabrication capability', union: 'Non-union' },
     ],
-    'AV / Lighting': [
-      { name: 'GSE Audio Visual', specialty: 'LED walls, projectors, lighting & truss', website: 'gseav.com', notes: '500+ trade shows annually', union: 'Union at Javits' },
-    ],
-    'Furniture Rental': [
-      { name: 'CORT Events', specialty: 'Event furniture, nationwide', website: 'cortevents.com', notes: 'National coverage with NY stock', union: 'Non-union' },
-      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture', website: 'afrtradeshow.com', notes: 'National provider', union: 'Non-union' },
+    'General Contractors / I&D Labor': [
+      { name: 'Freeman', specialty: 'Official GC — Javits Center material handling & labor', website: 'freemanco.com', notes: 'Primary contractor at Javits; Teamsters required', union: 'Union (Teamsters/Carpenters/IBEW)' },
+      { name: 'Expo Event Services', specialty: 'EAC labor, furniture, on-site management', website: 'expoeventservices.com', notes: 'Exhibitor-appointed contractor; Javits specialist', union: 'Union-coordinated' },
     ],
   },
   boston: {
-    'I&D Contractors': [
-      { name: 'Exponents', specialty: 'Full on-site support, AV setup, union coordination', website: 'exponents.com', notes: 'BCEC and Hynes CC specialist', union: 'Union (Carpenters/IATSE)' },
-      { name: 'Iconic Displays', specialty: 'Thousands of Boston venue installations', website: 'iconicdisplays.com', notes: 'Established Boston presence', union: 'Non-union' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Cardinal Expo', specialty: 'Custom booth rental, fabrication, installation', website: 'cardinalexpo.com', notes: 'Full-service exhibit house; BCEC specialist', union: 'Non-union' },
+      { name: 'Müller Expo', specialty: 'Custom exhibit design, fabrication, installation', website: 'mullerexpo.com', notes: 'National coverage with Boston capability', union: 'Non-union' },
+      { name: 'Vivid Exhibits', specialty: 'Custom and rental booth solutions', website: 'vividexhibits.com', notes: 'Boston area exhibit house', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Cardinal Expo', specialty: 'Custom booth rental, fabrication, installation', website: 'cardinalexpo.com', notes: 'Full-service exhibit house', union: 'Non-union' },
-      { name: 'Müller Expo', specialty: 'Design, fabrication, installation, warehouse', website: 'mullerexpo.com', notes: 'National coverage', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'Exponents', specialty: 'Turnkey booth rentals, furniture, flooring, AV', website: 'exponents.com', notes: 'BCEC and Hynes CC specialist; full packages', union: 'Non-union' },
+      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture rentals', website: 'afrtradeshow.com', notes: 'National provider', union: 'Non-union' },
     ],
-    'Graphics / Print': [
-      { name: 'ICL Imaging', specialty: 'SEG fabric, tension fabric, rigid graphics', website: 'icl-imaging.com', notes: 'First in New England for fabric banner printing', union: 'Non-union' },
-      { name: 'SpeedPro Boston Metrowest', specialty: 'Trade show & retail graphics', website: 'speedpro.com', notes: 'Fast turnaround', union: 'Non-union' },
+    'Graphics / Print Shops': [
+      { name: 'ICL Imaging', specialty: 'SEG fabric, tension fabric displays, rigid graphics', website: 'icl-imaging.com', notes: 'First in New England for fabric banner printing', union: 'Non-union' },
+      { name: 'SpeedPro Boston Metrowest', specialty: 'Trade show graphics, banners, retail signage', website: 'speedpro.com', notes: 'National franchise; fast turnaround', union: 'Non-union' },
     ],
-    'AV / Lighting': [
-      { name: 'AVR Expos', specialty: 'LED walls, projectors, sound, touchscreens', website: 'avrexpos.com', notes: 'BCEC, Hynes expertise', union: 'Union at BCEC' },
-      { name: 'Aria AV', specialty: 'Full-service AV, 24/7 support', website: 'ariaav.com', notes: 'Corporate events specialist', union: 'Non-union' },
-    ],
-    'Furniture Rental': [
-      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture nationwide', website: 'afrtradeshow.com', notes: 'National coverage', union: 'Non-union' },
-      { name: 'CORT Events', specialty: 'Event furniture', website: 'cortevents.com', notes: 'National provider', union: 'Non-union' },
+    'General Contractors / I&D Labor': [
+      { name: 'Freeman', specialty: 'Official GC — BCEC and major Boston shows', website: 'freemanco.com', notes: 'Primary GC; union labor required at BCEC', union: 'Union (Carpenters/IATSE)' },
+      { name: 'GES', specialty: 'General service contractor; Boston shows', website: 'ges.com', notes: 'National GC with Boston experience', union: 'Union at major venues' },
     ],
   },
   philadelphia: {
-    'I&D Contractors': [
-      { name: 'Pennsylvania Convention Center Exhibitor Services', specialty: 'Official labor coordination', website: 'paconvention.com', notes: 'Contact: 215-418-2190; exhibitorservices@paconvention.com', union: 'Union (Carpenters/Teamsters/IBEW/IATSE)' },
-      { name: 'Exponents', specialty: 'Turnkey booth services, I&D', website: 'exponents.com', notes: 'National coverage', union: 'Non-union (EAC)' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Metro Exhibits', specialty: 'Custom exhibits, full-service, PCC specialist', website: 'metroexhibits.com', notes: 'Philadelphia Convention Center specialist', union: 'Non-union' },
+      { name: 'Airborne Visuals', specialty: 'Display systems, raised flooring, custom builds', website: 'airbornevisuals.com', notes: 'PCC exhibitor services; ARES-X flooring', union: 'Non-union' },
+      { name: 'Exponents', specialty: 'Turnkey exhibit rentals and custom builds', website: 'exponents.com', notes: 'National coverage with Philadelphia presence', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Metro Exhibits', specialty: 'Full-service exhibits, Philadelphia', website: 'metroexhibits.com', notes: 'PCC specialist', union: 'Non-union' },
-      { name: 'Airborne Visuals', specialty: 'Display systems, raised flooring', website: 'airbornevisuals.com', notes: 'ARES-X flooring specialty', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture, modular displays', website: 'afrtradeshow.com', notes: 'National coverage', union: 'Non-union' },
+      { name: 'CORT Events', specialty: 'Event furniture rentals', website: 'cortevents.com', notes: 'Philadelphia inventory', union: 'Non-union' },
     ],
-    'Graphics / Print': [
-      { name: 'Color Reflections', specialty: 'Event branding, convention banners', website: 'colorreflections.com', notes: 'Convention & retail display expertise', union: 'Non-union' },
+    'Graphics / Print Shops': [
+      { name: 'Color Reflections', specialty: 'Event branding, convention banners, retractable banners', website: 'colorreflections.com', notes: 'Convention & retail display expertise', union: 'Non-union' },
       { name: 'PDC Graphics', specialty: 'Booth backdrops, banner stands, hanging signs', website: 'pdcgraphics.com', notes: 'PCC exhibitor-focused', union: 'Non-union' },
     ],
-    'AV / Lighting': [
-      { name: 'GSE Audio Visual', specialty: 'LED, projectors, audio, lighting & truss', website: 'gseav.com', notes: 'One of largest US rental providers', union: 'Union at PCC' },
-    ],
-    'Furniture Rental': [
-      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture', website: 'afrtradeshow.com', notes: 'National coverage', union: 'Non-union' },
+    'General Contractors / I&D Labor': [
+      { name: 'Pennsylvania Convention Center Exhibitor Services', specialty: 'Official labor coordination', website: 'paconvention.com', notes: 'Contact: 215-418-2190; exhibitorservices@paconvention.com', union: 'Union (Carpenters/Teamsters/IBEW/IATSE)' },
+      { name: 'Freeman', specialty: 'Official GC for many PCC shows', website: 'freemanco.com', notes: 'Primary GC; union jurisdiction', union: 'Union' },
     ],
   },
   chicago: {
-    'I&D Contractors': [
-      { name: 'TRU Service Group', specialty: 'Professional I&D since 2010', website: 'truservicegroup.com', notes: 'McCormick Place specialist', union: 'Union (all McCormick trades)' },
-      { name: 'Complete Crewing Inc.', specialty: 'Union-signatory contractor, all local unions', website: 'completecrewing.com', notes: 'Registered for all McCormick Place union locals', union: 'Union' },
-      { name: 'ProExhibits', specialty: 'I&D with Chicago union crew expertise', website: 'proexhibits.com', notes: 'Extensive McCormick Place experience', union: 'Non-union (EAC)' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Nimlok Chicago', specialty: 'Award-winning modular and custom booth building', website: 'nimlok-chicago.com', notes: 'Full-service exhibit house; McCormick specialist', union: 'Non-union' },
+      { name: 'Sensations Exhibits', specialty: 'Custom exhibit builds, 23+ years, award-winning', website: 'sensationsexhibits.com', notes: 'Large production facility; full-service', union: 'Non-union' },
+      { name: 'ProExhibits', specialty: 'Custom design, fabrication, installation', website: 'proexhibits.com', notes: 'Award-winning; McCormick Place experience', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Nimlok Chicago', specialty: 'Award-winning modular booth building', website: 'nimlok-chicago.com', notes: 'Full-service exhibit house', union: 'Non-union' },
-      { name: 'Sensations Exhibits', specialty: '23+ years, award-winning booth builder', website: 'sensationsexhibits.com', notes: 'Production facility; 5700+ sqm', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'Entourage X', specialty: 'Furniture, seating, counters, lounge pieces for trade shows', website: 'entouragex.com', notes: 'Chicago trade show rental specialist', union: 'Non-union' },
+      { name: 'Exponents', specialty: 'Booth rentals, modular systems, furniture', website: 'exponents.com', notes: 'National network; McCormick coverage', union: 'Non-union' },
+      { name: 'Modern Event Rentals', specialty: 'LED furniture, display lighting, specialty rentals', website: 'moderneventrental.com', notes: 'Popular for trade show activations', union: 'Non-union' },
     ],
-    'Graphics / Print': [
-      { name: 'SpeedPro Chicago', specialty: 'Large format printing, vinyl banners', website: 'speedpro.com', notes: 'National franchise, Chicago locations', union: 'Non-union' },
+    'Graphics / Print Shops': [
+      { name: 'Dye Mansion', specialty: 'Large-format printing, trade show displays', website: 'dyemansion.com', notes: 'Chicago print specialist', union: 'Non-union' },
+      { name: 'SpeedPro Chicago', specialty: 'Banners, booth graphics, vinyl wraps', website: 'speedpro.com', notes: 'National franchise; Chicago locations', union: 'Non-union' },
     ],
-    'AV / Lighting': [
-      { name: 'Freeman AV', specialty: 'Official AV at many McCormick shows', website: 'freemanco.com', notes: 'Largest US tradeshow AV provider', union: 'Union at McCormick' },
-      { name: 'GSE Audio Visual', specialty: 'LED, projectors, audio, truss', website: 'gseav.com', notes: '500+ shows annually', union: 'Union at McCormick' },
-    ],
-    'Furniture Rental': [
-      { name: 'Entourage X', specialty: 'Furniture, seating, counters, lounge pieces', website: 'entouragex.com', notes: 'Chicago trade show specialist', union: 'Non-union' },
-      { name: 'Modern Event Rentals', specialty: 'LED furniture, light-up tables, bars', website: 'moderneventrental.com', notes: 'Popular for trade show activations', union: 'Non-union' },
+    'General Contractors / I&D Labor': [
+      { name: 'GES', specialty: 'Official GC — McCormick Place', website: 'ges.com', notes: 'Largest GC at McCormick; all union trades', union: 'Union (Carpenters/Electricians/Teamsters/Riggers)' },
+      { name: 'TRU Service Group', specialty: 'Professional I&D crews since 2010', website: 'truservicegroup.com', notes: 'McCormick specialist; union-coordinated', union: 'Union' },
+      { name: 'Complete Crewing Inc.', specialty: 'Registered for all McCormick union locals', website: 'completecrewing.com', notes: 'All union jurisdictions covered', union: 'Union-signatory' },
     ],
   },
   kansas_city: {
-    'I&D Contractors': [
-      { name: 'Liberty Exposition Services', specialty: 'Professional trade show solutions', website: 'libertyexpo.com', notes: 'Kansas City general service contractor', union: 'Mixed' },
-      { name: 'Fern', specialty: 'General contractor, 200+ cities', website: 'fernexpo.com', notes: 'National coast-to-coast coverage', union: 'Union at major venues' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Cardinal Expo', specialty: 'Custom design, production, graphics, logistics', website: 'cardinalexpo.com', notes: 'Full-service exhibit house; national reach', union: 'Non-union' },
+      { name: 'Vivid Exhibits', specialty: 'Custom and rental trade show displays', website: 'vividexhibits.com', notes: 'All services including local labor', union: 'Non-union' },
+      { name: 'Iconic Displays', specialty: 'Hardware, lighting, flooring, furniture, I&D', website: 'iconicdisplays.com', notes: 'Full-service provider; Kansas City presence', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Cardinal Expo', specialty: 'Custom design, production, graphics, logistics', website: 'cardinalexpo.com', notes: 'Full-service exhibit house', union: 'Non-union' },
-      { name: 'Vivid Exhibits', specialty: 'Custom & rental displays', website: 'vividexhibits.com', notes: 'All services including local labor', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture nationwide', website: 'afrtradeshow.com', notes: 'National provider', union: 'Non-union' },
+      { name: 'Swisstrax', specialty: 'Modular interlocking flooring tiles', website: 'swisstrax.com', notes: '18 colors, custom logos; quick setup', union: 'Non-union' },
     ],
-    'Graphics / Print': [
-      { name: 'Trabon Group', specialty: 'Large format, trade show displays', website: 'trabongroup.com', notes: 'Almost 50 years experience', union: 'Non-union' },
-      { name: 'SpeedPro North Kansas City', specialty: 'Large format, vinyl banners', website: 'speedpro.com', notes: 'National franchise', union: 'Non-union' },
+    'Graphics / Print Shops': [
+      { name: 'Trabon Group', specialty: 'Large format, trade show displays, signs', website: 'trabongroup.com', notes: 'Almost 50 years experience; Kansas City-based', union: 'Non-union' },
+      { name: 'SpeedPro North Kansas City', specialty: 'Large format, vinyl banners, trade show graphics', website: 'speedpro.com', notes: 'National franchise', union: 'Non-union' },
     ],
-    'AV / Lighting': [
-      { name: 'AVR Expos', specialty: 'LED walls, projectors, sound', website: 'avrexpos.com', notes: 'National trade show AV', union: 'Non-union' },
-    ],
-    'Furniture Rental': [
-      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture', website: 'afrtradeshow.com', notes: 'National provider', union: 'Non-union' },
-      { name: 'Swisstrax', specialty: 'Modular interlocking flooring tiles', website: 'swisstrax.com', notes: '18 colors, custom logos', union: 'Non-union' },
+    'General Contractors / I&D Labor': [
+      { name: 'Liberty Exposition Services', specialty: 'General service contractor for Kansas City shows', website: 'libertyexpo.com', notes: 'KCCC specialist; professional crews', union: 'Mixed' },
+      { name: 'Fern', specialty: 'National GC; 200+ cities including Kansas City', website: 'fernexpo.com', notes: 'National coverage; coast-to-coast', union: 'Union at major venues' },
     ],
   },
   dallas: {
-    'I&D Contractors': [
+    'Exhibit Fabricators / Builders': [
+      { name: 'ProExhibits', specialty: 'Custom design, fabrication, installation — award-winning', website: 'proexhibits.com', notes: 'Full-service; Dallas and national shows', union: 'Non-union' },
+      { name: 'Foster Display Group', specialty: 'Top 50 fabricator; design, fabrication, shipping, I&D', website: 'buildwithfoster.com', notes: 'One-roof operation; established builder', union: 'Non-union' },
+      { name: 'TrueBlue Exhibits', specialty: 'KBH Convention Center rentals and custom builds', website: 'trueblue-exhibits.com', notes: 'Dallas specialist', union: 'Non-union' },
+    ],
+    'Rental Companies': [
+      { name: 'Exponents', specialty: 'Booth rentals, modular systems, furniture, flooring', website: 'exponents.com', notes: 'National coverage with Dallas capability', union: 'Non-union' },
+      { name: 'CORT Events', specialty: 'Event furniture rentals', website: 'cortevents.com', notes: 'Dallas stock available', union: 'Non-union' },
+    ],
+    'Graphics / Print Shops': [
+      { name: 'SpeedPro Dallas', specialty: 'Booth graphics, banners, step-and-repeat, vinyl', website: 'speedpro.com/dallas', notes: 'Fast turnaround; national franchise', union: 'Non-union' },
+      { name: 'Positive Marketing USA', specialty: 'Vinyl & mesh banners, trade show displays', website: 'positivemarketingusa.com', notes: 'Dallas-based printer', union: 'Non-union' },
+    ],
+    'General Contractors / I&D Labor': [
       { name: 'All Exhibit', specialty: 'Statewide TX service — Dallas, Austin, Houston', website: 'allexhibit.com', notes: 'Non-union; flexible crew options', union: 'Non-union' },
-      { name: 'Vivid Exhibits', specialty: 'Custom & rental booths with local labor', website: 'vividexhibits.com', notes: 'KBH Convention Center expertise', union: 'Non-union' },
-    ],
-    'Exhibit Houses': [
-      { name: 'ProExhibits', specialty: 'Custom design, fabrication, installation', website: 'proexhibits.com', notes: 'Award-winning full-service', union: 'Non-union' },
-      { name: 'TrueBlue Exhibits', specialty: 'KBH Convention Center rentals & design', website: 'trueblue-exhibits.com', notes: 'Dallas specialist', union: 'Non-union' },
-    ],
-    'Graphics / Print': [
-      { name: 'SpeedPro Dallas', specialty: 'Custom banners, booth graphics, vinyl', website: 'speedpro.com/dallas', notes: 'Fast turnaround, national franchise', union: 'Non-union' },
-      { name: 'Positive Marketing USA', specialty: 'Vinyl & mesh banners, trade show displays', website: 'positivemarketingusa.com', notes: 'Dallas-based', union: 'Non-union' },
-    ],
-    'AV / Lighting': [
-      { name: 'AVR Expos', specialty: 'LED walls, projectors, sound, touchscreens', website: 'avrexpos.com', notes: 'National trade show AV', union: 'Non-union' },
-    ],
-    'Furniture Rental': [
-      { name: 'CORT Events', specialty: 'Event furniture, nationwide', website: 'cortevents.com', notes: 'National coverage', union: 'Non-union' },
-      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture', website: 'afrtradeshow.com', notes: 'National provider', union: 'Non-union' },
+      { name: 'Shepard Exposition Services', specialty: 'Official GC for many Dallas shows', website: 'shepardexpo.com', notes: 'National GC; KBH Convention Center presence', union: 'Union at major venues' },
     ],
   },
   houston: {
-    'I&D Contractors': [
-      { name: 'Metro Exhibits', specialty: 'Booth rentals, custom exhibits, I&D', website: 'metroexhibits.com', notes: 'GRB Convention Center primary provider', union: 'Non-union' },
-      { name: '21st Century Expo Group', specialty: 'Exclusive dock services at GRB', website: '21stcenturyexpo.com', notes: 'Drayage/dock specialist at GRB', union: 'Non-union' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Exhibit House Houston', specialty: 'Custom exhibit design, fabrication, turnkey solutions', website: 'exhibithousehouston.com', notes: 'Houston-based full-service builder', union: 'Non-union' },
+      { name: 'South Star Exhibits', specialty: 'Custom exhibits, fabrication, full services', website: 'southstarexhibits.com', notes: 'Full-service Houston exhibit company', union: 'Non-union' },
+      { name: 'Metro Exhibits', specialty: 'Booth rentals, custom exhibits, I&D', website: 'metroexhibits.com', notes: 'George R. Brown CC primary provider', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Exhibit House Houston', specialty: 'Custom exhibit design, fabrication, turnkey', website: 'exhibithousehouston.com', notes: 'Houston-based builder', union: 'Non-union' },
-      { name: 'South Star Exhibits', specialty: 'Custom exhibits, fabrication, full services', website: 'southstarexhibits.com', notes: 'Full-service Houston company', union: 'Non-union' },
-    ],
-    'Graphics / Print': [
-      { name: 'SpeedPro Houston', specialty: 'Large format, banners, trade show graphics', website: 'speedpro.com', notes: 'National franchise, fast turnaround', union: 'Non-union' },
-    ],
-    'AV / Lighting': [
-      { name: 'AVR Expos', specialty: 'LED walls, projectors, sound — GRB & NRG', website: 'avrexpos.com', notes: 'George R. Brown & NRG Park specialist', union: 'Non-union' },
-      { name: 'AB AV Rentals', specialty: 'LED walls, projectors, sound, staging, lighting', website: 'abavrentals.com', notes: 'Full-range AV', union: 'Non-union' },
-    ],
-    'Furniture Rental': [
-      { name: 'Vibrant Rental', specialty: 'FastDeck 2.0 event flooring system', website: 'vibrantrental.com', notes: 'Advanced trade show flooring', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'Vibrant Rental', specialty: 'FastDeck 2.0 event flooring, furniture rentals', website: 'vibrantrental.com', notes: 'Advanced trade show flooring systems', union: 'Non-union' },
       { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture', website: 'afrtradeshow.com', notes: 'National provider', union: 'Non-union' },
+    ],
+    'Graphics / Print Shops': [
+      { name: 'SpeedPro Houston', specialty: 'Large format, banners, trade show graphics', website: 'speedpro.com', notes: 'National franchise; fast turnaround', union: 'Non-union' },
+      { name: 'Printing for Less Houston', specialty: 'Custom banners, signage, trade show prints', website: 'printingforless.com', notes: 'Houston area large-format specialist', union: 'Non-union' },
+    ],
+    'General Contractors / I&D Labor': [
+      { name: 'Shepard Exposition Services', specialty: 'Official GC at George R. Brown CC', website: 'shepardexpo.com', notes: 'Primary GC at GRB; national coverage', union: 'Union at GRB' },
+      { name: '21st Century Expo Group', specialty: 'Exclusive dock services at GRB', website: '21stcenturyexpo.com', notes: 'Drayage and dock specialist at GRB', union: 'Non-union' },
     ],
   },
   austin: {
-    'I&D Contractors': [
-      { name: 'Trade Show Displays of Austin', specialty: 'Certified labor, riggers, technicians', website: 'tradeshowdisplayaustin.com', notes: 'Austin CC specialist; East & North Austin ops', union: 'Non-union' },
-      { name: 'Exhibit Experience', specialty: 'I&D services, efficient execution', website: 'exhibitexperience.com', notes: 'Certified EAC', union: 'Non-union' },
-    ],
-    'Exhibit Houses': [
-      { name: 'Foster Display Group', specialty: 'Design, fabrication, shipping, install, dismantle', website: 'buildwithfoster.com', notes: 'Top 50 fabrication company', union: 'Non-union' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Trade Show Displays of Austin', specialty: 'Custom builds, modular rentals, AV, logistics', website: 'tradeshowdisplayaustin.com', notes: 'Austin CC specialist; certified EAC; full-service', union: 'Non-union' },
+      { name: 'Foster Display Group', specialty: 'Design, fabrication, shipping, install, dismantle', website: 'buildwithfoster.com', notes: 'Top 50 fabricator; serves Austin market', union: 'Non-union' },
       { name: 'Austin Art Services', specialty: 'Exhibit design, fabrication, logistics', website: 'austinartservices.com', notes: 'Local Austin builder', union: 'Non-union' },
     ],
-    'Graphics / Print': [
-      { name: 'ProGraphix Austin', specialty: 'Large format, banners, event branding', website: 'pgaustin.com', notes: '25+ years; SXSW & ACL experience', union: 'Non-union' },
-      { name: 'Austin Sign Co.', specialty: 'Vinyl signage, trade show displays', website: 'austinsignco.com', notes: 'Festival & event specialist', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'Exhibit Experience', specialty: 'Booth rentals, furniture, flooring — certified EAC', website: 'exhibitexperience.com', notes: 'Affordable rentals; extensive inventory', union: 'Non-union' },
+      { name: 'CORT Events', specialty: 'Event furniture rentals', website: 'cortevents.com', notes: 'National coverage', union: 'Non-union' },
     ],
-    'AV / Lighting': [
-      { name: 'Trade Show Displays of Austin', specialty: 'AV setup included in packages', website: 'tradeshowdisplayaustin.com', notes: 'Integrated service provider', union: 'Non-union' },
+    'Graphics / Print Shops': [
+      { name: 'ProGraphix Austin', specialty: 'Large format, banners, event branding, vehicle wraps', website: 'pgaustin.com', notes: '25+ years; SXSW & ACL specialist', union: 'Non-union' },
+      { name: 'Austin Sign Co.', specialty: 'Vinyl signage, trade show displays', website: 'austinsignco.com', notes: 'Festival and event specialist', union: 'Non-union' },
     ],
-    'Furniture Rental': [
-      { name: 'CORT Events', specialty: 'Event furniture, nationwide', website: 'cortevents.com', notes: 'National coverage', union: 'Non-union' },
+    'General Contractors / I&D Labor': [
+      { name: 'Trade Show Displays of Austin', specialty: 'Certified labor leads, riggers, technicians', website: 'tradeshowdisplayaustin.com', notes: 'Full I&D; Austin CC and local venues', union: 'Non-union' },
+      { name: 'All Exhibit', specialty: 'Statewide TX service — Dallas, Austin, Houston', website: 'allexhibit.com', notes: 'Non-union; flexible options', union: 'Non-union' },
     ],
   },
   miami: {
-    'I&D Contractors': [
-      { name: 'Expo Convention Contractors Inc.', specialty: 'Full-service production, install/dismantle', website: 'expocci.com', notes: "Florida's full-service company; MBCC specialist", union: 'Union (IATSE/IBEW at MBCC)' },
-      { name: 'Vista South Convention Services', specialty: 'Furniture, material handling, I&D labor, cleaning', website: 'vistasouthcs.com', notes: 'General exposition contractor', union: 'Non-union (EAC)' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Sensations Worldwide', specialty: '22+ years, award-winning custom booth builder', website: 'sensationsworldwide.com', notes: '5700+ sqm production facilities; full-service', union: 'Non-union' },
+      { name: 'Connect Exhibit', specialty: 'High-quality custom booth design & build', website: 'connectexhibit.com', notes: 'Miami and South Florida specialist', union: 'Non-union' },
+      { name: 'Exhibit nStands Builder USA', specialty: 'Turnkey exhibit services; 4+ decades experience', website: 'exhibitnstandsbuilder.us', notes: 'Design, construction, shipping, install, dismantle', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Sensations Worldwide', specialty: '22+ years, award-winning booth builder', website: 'sensationsworldwide.com', notes: '5700+ sqm production facilities', union: 'Non-union' },
-      { name: 'Connect Exhibit', specialty: 'High-quality booth design & build', website: 'connectexhibit.com', notes: 'Thousands of satisfied clients', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'Vista South Convention Services', specialty: 'Furniture, material handling, flooring rentals', website: 'vistasouthcs.com', notes: 'Miami/MBCC specialist; general exposition contractor', union: 'Non-union' },
+      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture nationwide', website: 'afrtradeshow.com', notes: 'National provider', union: 'Non-union' },
     ],
-    'Graphics / Print': [
-      { name: 'SpeedPro Miami', specialty: 'Large format, vinyl banners, trade show', website: 'speedpro.com', notes: 'National franchise', union: 'Non-union' },
+    'Graphics / Print Shops': [
+      { name: 'SpeedPro Miami', specialty: 'Large format, vinyl banners, trade show graphics', website: 'speedpro.com', notes: 'National franchise; Miami location', union: 'Non-union' },
+      { name: 'Print Palace Miami', specialty: 'Custom banners, backlit displays, floor graphics', website: 'printpalacemiami.com', notes: 'Miami trade show print specialist', union: 'Non-union' },
     ],
-    'AV / Lighting': [
-      { name: 'AVR Expos', specialty: 'LED walls, projectors, sound, touchscreens', website: 'avrexpos.com', notes: 'MBCC and Miami area specialist', union: 'Union at MBCC' },
-    ],
-    'Furniture Rental': [
-      { name: 'Vista South Convention Services', specialty: 'Complete furniture rental with labor', website: 'vistasouthcs.com', notes: 'Miami specialist', union: 'Non-union' },
-      { name: 'So Cool Events', specialty: 'Display tables, counters, conference tables', website: 'socoolevents.com', notes: 'Event rental specialist', union: 'Non-union' },
+    'General Contractors / I&D Labor': [
+      { name: 'Expo Convention Contractors Inc.', specialty: 'Full-service production, install/dismantle', website: 'expocci.com', notes: "Florida's full-service GC; MBCC specialist", union: 'Union (IATSE/IBEW at MBCC)' },
+      { name: 'Freeman', specialty: 'Official GC for many Miami shows', website: 'freemanco.com', notes: 'National GC; union labor where required', union: 'Union at MBCC' },
     ],
   },
   atlanta: {
-    'I&D Contractors': [
-      { name: 'GES', specialty: 'General contractor — GWCC installation/signage/rigging', website: 'ges.com', notes: 'Official contractor at GWCC; open shop', union: 'Non-union (GWCC is open shop)' },
-      { name: 'Atlanta Trade Show Exhibits', specialty: 'Turnkey: design, fabrication, install, dismantle', website: 'atlantatradeshowexhibits.com', notes: 'Atlanta specialist', union: 'Non-union' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Atlanta Trade Show Exhibits', specialty: 'Turnkey: design, fabrication, install, dismantle', website: 'atlantatradeshowexhibits.com', notes: 'Atlanta specialist; GWCC expertise', union: 'Non-union' },
+      { name: 'Expo Creators', specialty: 'Exhibition stand design, fabrication, setup', website: 'expocreators.com', notes: 'Atlanta-based full-service builder', union: 'Non-union' },
+      { name: 'Metro Exhibits', specialty: 'Custom exhibits, booth rentals, I&D', website: 'metroexhibits.com', notes: 'Full-service provider; GWCC experience', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Metro Exhibits', specialty: 'Booth rentals, custom exhibits, I&D', website: 'metroexhibits.com', notes: 'Full-service provider', union: 'Non-union' },
-      { name: 'Expo Creators', specialty: 'Design, fabrication, setup & dismantling', website: 'expocreators.com', notes: 'Atlanta exhibition stand specialist', union: 'Non-union' },
-    ],
-    'Graphics / Print': [
-      { name: 'Wallace Graphics', specialty: 'Trade show graphics, signs, vinyl banners', website: 'wallacegraphics.com', notes: 'Atlanta trade show specialist', union: 'Non-union' },
-      { name: 'SpeedPro Greater Atlanta', specialty: 'Portable exhibits, step-and-repeat, banners', website: 'speedpro.com', notes: 'National franchise', union: 'Non-union' },
-    ],
-    'AV / Lighting': [
-      { name: 'AVR Expos', specialty: 'LED walls, projectors, sound — GWCC', website: 'avrexpos.com', notes: 'GWCC and multiple Atlanta facilities', union: 'Non-union' },
-      { name: 'SmartSource', specialty: 'GWCC, Cobb Galleria, AmericasMart specialist', website: 'thesmartsource.com', notes: 'Venue-specific AV expertise', union: 'Non-union' },
-    ],
-    'Furniture Rental': [
+    'Rental Companies': [
+      { name: 'Exponents', specialty: 'Booth rentals, modular systems, furniture, flooring', website: 'exponents.com', notes: 'National network; Atlanta coverage', union: 'Non-union' },
       { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture', website: 'afrtradeshow.com', notes: 'National provider', union: 'Non-union' },
+    ],
+    'Graphics / Print Shops': [
+      { name: 'Wallace Graphics', specialty: 'Trade show graphics, signs, vinyl banners', website: 'wallacegraphics.com', notes: 'Atlanta trade show specialist', union: 'Non-union' },
+      { name: 'SpeedPro Greater Atlanta', specialty: 'Portable exhibits, banners, step-and-repeat', website: 'speedpro.com', notes: 'National franchise; Atlanta locations', union: 'Non-union' },
+    ],
+    'General Contractors / I&D Labor': [
+      { name: 'GES', specialty: 'Official GC — Georgia World Congress Center', website: 'ges.com', notes: 'Open shop at GWCC; non-union labor available', union: 'Non-union (GWCC is open shop)' },
+      { name: 'Freeman', specialty: 'GC for selected Atlanta shows', website: 'freemanco.com', notes: 'National GC; Atlanta presence', union: 'Non-union at GWCC' },
     ],
   },
   los_angeles: {
-    'I&D Contractors': [
-      { name: 'Freeman', specialty: 'General contractor — LACC material handling', website: 'freemanco.com', notes: 'Primary contractor at LACC; union labor required', union: 'Union (IATSE Local 831, Teamsters)' },
-      { name: 'GES', specialty: 'General service contractor, LACC', website: 'ges.com', notes: 'Alternate GC at LA shows', union: 'Union' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Blueprint Exhibits', specialty: 'Custom booth design, fabrication, rentals', website: 'blueprintexhibits.com', notes: 'Industry leader in LA; full-service', union: 'Non-union' },
+      { name: 'Sensations Worldwide', specialty: '22+ years, award-winning booth builder', website: 'sensationsworldwide.com', notes: 'LA production & warehouse; full-service', union: 'Non-union' },
+      { name: 'RCS Custom Exhibits', specialty: 'Custom booth design, builders, full service', website: 'rcscustomexhibits.com', notes: 'LA-based custom exhibit house', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Blueprint Exhibits', specialty: 'Trade show booth rental, custom exhibits', website: 'blueprintexhibits.com', notes: 'Industry leader in LA', union: 'Non-union' },
-      { name: 'Sensations Worldwide', specialty: '22+ years, award-winning booth builder', website: 'sensationsworldwide.com', notes: 'LA production & warehouse', union: 'Non-union' },
-    ],
-    'Graphics / Print': [
-      { name: 'Image Square Printing', specialty: 'Large format, movie studios, conferences, trade shows', website: 'imagesquareprinting.com', notes: '20+ years experience', union: 'Non-union' },
-      { name: 'Platon Graphics', specialty: 'Corporate murals, custom banners, building wraps', website: 'platongraphics.com', notes: 'Large format specialist', union: 'Non-union' },
-    ],
-    'AV / Lighting': [
-      { name: 'AVR Expos', specialty: 'LED walls, projectors, sound — LACC', website: 'avrexpos.com', notes: 'Union coordination at LACC', union: 'Union at LACC' },
-    ],
-    'Furniture Rental': [
-      { name: 'CORT Events', specialty: 'Event furniture, nationwide', website: 'cortevents.com', notes: 'LA stock available', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'Exponents', specialty: 'Booth rentals, modular systems, furniture, flooring', website: 'exponents.com', notes: '30,000 sqft San Diego facility; LA delivery', union: 'Non-union' },
       { name: 'RG Event Surfaces', specialty: 'Portable, customizable trade show flooring', website: 'rgeventsurfaces.com', notes: 'LA flooring specialist', union: 'Non-union' },
+    ],
+    'Graphics / Print Shops': [
+      { name: 'Image Square Printing', specialty: 'Large format, movie studios, conferences, trade shows', website: 'imagesquareprinting.com', notes: '20+ years experience; LA specialist', union: 'Non-union' },
+      { name: 'Platon Graphics', specialty: 'Corporate murals, custom banners, building wraps', website: 'platongraphics.com', notes: 'Large format specialist; LA/national', union: 'Non-union' },
+    ],
+    'General Contractors / I&D Labor': [
+      { name: 'Freeman', specialty: 'Official GC — LA Convention Center', website: 'freemanco.com', notes: 'Primary GC at LACC; IATSE Local 831 required', union: 'Union (IATSE Local 831, Teamsters Local 986)' },
+      { name: 'GES', specialty: 'GC for LA area shows', website: 'ges.com', notes: 'National GC; alternate to Freeman at some shows', union: 'Union' },
     ],
   },
   seattle: {
-    'I&D Contractors': [
-      { name: 'Freeman', specialty: 'General contractor — WSCC', website: 'freemanco.com', notes: 'Primary GC at Washington State CC; union required', union: 'Union (Carpenters/IBEW/IATSE/Teamsters)' },
-      { name: 'American Image Displays', specialty: 'Trade show exhibits, banners, I&D', website: 'american-image.com', notes: 'Seattle specialist', union: 'Non-union' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Expo Stand Services', specialty: 'Design, construction, fabrication, shipping, I&D', website: 'expostandservice.com', notes: '18+ years; comprehensive full-service', union: 'Non-union' },
+      { name: 'Exponents', specialty: 'Custom and rental exhibit builds', website: 'exponents.com', notes: 'National coverage with Seattle capability', union: 'Non-union' },
+      { name: 'American Image Displays', specialty: 'Trade show exhibits, banners, booth I&D', website: 'american-image.com', notes: 'Seattle-based exhibit specialist', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Expo Stand Services', specialty: 'Design, construction, fabrication, shipping, I&D', website: 'expostandservice.com', notes: '18+ years, comprehensive', union: 'Non-union' },
-    ],
-    'Graphics / Print': [
-      { name: 'Signs of Seattle', specialty: 'Custom banners, trade show booths, retail displays', website: 'signsofseattle.com', notes: 'Cutting-edge large format', union: 'Non-union' },
-      { name: 'Seattle Design and Print', specialty: 'Custom banners, trade show graphics, vehicle wraps', website: 'seattledesignandprint.com', notes: '25+ years experience', union: 'Non-union' },
-    ],
-    'AV / Lighting': [
-      { name: 'Audio Visual Factory', specialty: 'Pacific Northwest AV, since 1979', website: 'avfactory.com', notes: 'Established local company, regional reputation', union: 'Non-union' },
-      { name: 'SmartSource', specialty: 'Seattle CC, Meydenbauer Center specialist', website: 'thesmartsource.com', notes: 'Venue-specific partnerships', union: 'Union at WSCC' },
-    ],
-    'Furniture Rental': [
+    'Rental Companies': [
       { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture nationwide', website: 'afrtradeshow.com', notes: 'National coverage', union: 'Non-union' },
+      { name: 'Exponents', specialty: 'Booth rentals, modular systems, furniture', website: 'exponents.com', notes: 'Includes flooring and furniture packages', union: 'Non-union' },
+    ],
+    'Graphics / Print Shops': [
+      { name: 'Signs of Seattle', specialty: 'Custom banners, trade show booths, retail displays', website: 'signsofseattle.com', notes: 'Cutting-edge large format; Seattle specialist', union: 'Non-union' },
+      { name: 'Seattle Design and Print', specialty: 'Trade show graphics, vehicle wraps, banners', website: 'seattledesignandprint.com', notes: '25+ years experience', union: 'Non-union' },
+    ],
+    'General Contractors / I&D Labor': [
+      { name: 'Freeman', specialty: 'Official GC — Washington State Convention Center', website: 'freemanco.com', notes: 'Primary GC at WSCC; union jurisdiction', union: 'Union (Carpenters/IBEW Local 46/IATSE Local 15/Teamsters)' },
+      { name: 'GES', specialty: 'GC for Seattle area shows', website: 'ges.com', notes: 'National GC; alternate at some Seattle shows', union: 'Union at WSCC' },
     ],
   },
   san_francisco: {
-    'I&D Contractors': [
-      { name: 'Pure Exhibits', specialty: 'Union labor coordination, Teamsters scheduling', website: 'purexhibits.com', notes: 'Present every March at Moscone; Teamsters required', union: 'Union (IATSE Local 16, Teamsters, IBEW Local 6)' },
-      { name: 'Iconic Displays', specialty: 'Thousands of SF convention center installations', website: 'iconicdisplays.com', notes: 'Large Bay Area warehouse', union: 'Non-union (EAC)' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Arena Exhibits', specialty: 'Custom design & fabrication; in-house CNC & wood shop', website: 'arenaexhibits.com', notes: 'Independent since 1997; Mission District, SF; high quality', union: 'Non-union' },
+      { name: 'Blueprint Exhibits', specialty: 'All-inclusive booth design, fabrication, rentals', website: 'blueprintexhibits.com', notes: 'SD production facility; serves SF/Bay Area shows', union: 'Non-union' },
+      { name: 'Sensations Worldwide', specialty: '21+ years, award-winning booth builder', website: 'sensationsworldwide.com', notes: 'Bay Area warehouse and production', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Arena Exhibits', specialty: 'Custom design & fabrication, in-house CNC', website: 'arenaexhibits.com', notes: 'Independent since 1997; Mission District', union: 'Non-union' },
-      { name: 'Blueprint Exhibits', specialty: 'All-inclusive design, fabrication, rentals', website: 'blueprintexhibits.com', notes: 'San Diego production for SF shows', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'Exponents', specialty: 'Booth rentals, modular systems, furniture, flooring', website: 'exponents.com', notes: 'Large Bay Area warehouse; Moscone specialist', union: 'Non-union' },
+      { name: 'Exhibit Experience', specialty: 'Furniture, flooring, affordable rentals', website: 'exhibitexperience.com', notes: 'Certified EAC; extensive inventory', union: 'Non-union' },
     ],
-    'Graphics / Print': [
-      { name: 'San Francisco Banner', specialty: 'Custom vinyl banners, retractable stands', website: 'sanfranciscobanner.com', notes: 'Indoor & outdoor trade show displays', union: 'Non-union' },
-      { name: 'Dynamite Digital', specialty: 'Event venue graphics, corporate events', website: 'dynamitedigital.com', notes: 'Moscone specialist', union: 'Non-union' },
+    'Graphics / Print Shops': [
+      { name: 'Dynamite Digital', specialty: 'Event venue graphics, large format, Moscone specialist', website: 'dynamitedigital.com', notes: 'SF trade show print expert', union: 'Non-union' },
+      { name: 'San Francisco Banner', specialty: 'Custom vinyl banners, retractable banner stands', website: 'sanfranciscobanner.com', notes: 'Indoor & outdoor trade show displays', union: 'Non-union' },
     ],
-    'AV / Lighting': [
-      { name: 'GSE Audio Visual', specialty: 'LED, projectors, audio, lighting — 500+ shows/yr', website: 'gseav.com', notes: 'One of largest US rental providers', union: 'Union at Moscone' },
-    ],
-    'Furniture Rental': [
-      { name: 'Exhibit Experience', specialty: 'Furniture, flooring, affordable rentals', website: 'exhibitexperience.com', notes: 'Extensive inventory; certified EAC', union: 'Non-union' },
-      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture', website: 'afrtradeshow.com', notes: 'National provider', union: 'Non-union' },
+    'General Contractors / I&D Labor': [
+      { name: 'Freeman', specialty: 'Official GC — Moscone Center', website: 'freemanco.com', notes: 'Primary GC at Moscone; Teamsters + IATSE required', union: 'Union (IATSE Local 16, Teamsters Local 65, IBEW Local 6)' },
+      { name: 'Pure Exhibits', specialty: 'EAC; union labor coordination, Teamsters scheduling', website: 'purexhibits.com', notes: 'Every March at Moscone; union-experienced EAC', union: 'Union-coordinated EAC' },
     ],
   },
   usa: {
-    'I&D Contractors': [
-      { name: 'Freeman', specialty: 'General contractor, national coverage', website: 'freemanco.com', notes: 'Largest US trade show services company', union: 'Union at major venues' },
-      { name: 'GES', specialty: 'General contractor, national coverage', website: 'ges.com', notes: 'National trade show services', union: 'Union at major venues' },
+    'Exhibit Fabricators / Builders': [
+      { name: 'Exponents', specialty: 'Nationwide booth rental and custom builds', website: 'exponents.com', notes: '30,000 sqft production; 97% in-house; nationwide install', union: 'Non-union' },
+      { name: 'Cardinal Expo', specialty: 'Full-service exhibit management, national', website: 'cardinalexpo.com', notes: 'Repairs, custom solutions, nationwide', union: 'Non-union' },
+      { name: 'Sensations Worldwide', specialty: '22+ years, award-winning; production facilities nationwide', website: 'sensationsworldwide.com', notes: 'National reach; multiple production sites', union: 'Non-union' },
     ],
-    'Exhibit Houses': [
-      { name: 'Exponents', specialty: 'Nationwide booth rental and I&D', website: 'exponents.com', notes: '30,000 sqft San Diego production; national install', union: 'Non-union' },
-      { name: 'Cardinal Expo', specialty: 'Full-service exhibit management, national', website: 'cardinalexpo.com', notes: 'Repairs, adaptations, custom solutions', union: 'Non-union' },
-    ],
-    'Graphics / Print': [
-      { name: 'SpeedPro', specialty: 'Large format printing, national franchise network', website: 'speedpro.com', notes: 'Locations in most major US cities', union: 'Non-union' },
-    ],
-    'AV / Lighting': [
-      { name: 'AVR Expos', specialty: 'LED walls, projectors, sound — national', website: 'avrexpos.com', notes: 'National trade show AV coverage', union: 'Varies by venue' },
-      { name: 'GSE Audio Visual', specialty: '500+ trade shows annually, national', website: 'gseav.com', notes: 'One of largest US AV rental providers', union: 'Varies by venue' },
-    ],
-    'Furniture Rental': [
-      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture, national', website: 'afrtradeshow.com', notes: 'Nationwide trade show furniture specialist', union: 'Non-union' },
+    'Rental Companies': [
+      { name: 'AFR Trade Show Rentals', specialty: 'Trade show furniture — national specialist', website: 'afrtradeshow.com', notes: 'Nationwide trade show furniture specialist', union: 'Non-union' },
       { name: 'CORT Events', specialty: 'Event furniture, nationwide', website: 'cortevents.com', notes: 'National coverage', union: 'Non-union' },
+    ],
+    'Graphics / Print Shops': [
+      { name: 'SpeedPro', specialty: 'Large format printing — national franchise network', website: 'speedpro.com', notes: 'Locations in most major US cities; consistent quality', union: 'Non-union' },
+      { name: 'Signs.com', specialty: 'Online large-format printing; national shipping', website: 'signs.com', notes: 'Fast online ordering; nationwide delivery', union: 'Non-union' },
+    ],
+    'General Contractors / I&D Labor': [
+      { name: 'Freeman', specialty: 'Largest US trade show GC; national coverage', website: 'freemanco.com', notes: 'Primary GC at most major US convention centers', union: 'Union at major venues' },
+      { name: 'GES', specialty: 'National GC; alternative to Freeman at many shows', website: 'ges.com', notes: 'National trade show services', union: 'Union at major venues' },
+      { name: 'Fern', specialty: 'National GC; 200+ cities', website: 'fernexpo.com', notes: 'Coast-to-coast coverage', union: 'Union at major venues' },
     ],
   },
 };
@@ -371,21 +362,24 @@ async function refreshCityVendors(city, env) {
   const cityLabel = city.replace(/_/g, ' ');
   const prompt = `You are a trade show industry expert. Research and provide current recommended vendors for trade show booth services in ${cityLabel} (USA/Canada).
 
+These vendors should be LOCAL companies in ${cityLabel} that can execute a complete trade show booth project: design, custom fabrication, installation, dismantle, and logistics. They are alternatives to a Toronto-based exhibit house for projects happening in ${cityLabel}.
+
 Return a JSON object with this exact structure:
 {
-  "I&D Contractors": [{"name": "...", "specialty": "...", "website": "...", "notes": "...", "union": "Union|Non-union|Mixed"}],
-  "Exhibit Houses": [...],
-  "Graphics / Print": [...],
-  "AV / Lighting": [...],
-  "Furniture Rental": [...]
+  "Exhibit Fabricators / Builders": [{"name": "...", "specialty": "...", "website": "...", "notes": "...", "union": "Union|Non-union|Mixed"}],
+  "Rental Companies": [...],
+  "Graphics / Print Shops": [...],
+  "General Contractors / I&D Labor": [...]
 }
 
 Requirements:
 - 2-3 vendors per category
-- Companies that have been operating 5+ years
-- Companies that work with outside exhibit companies (not exclusive house contractors only)
-- Include union affiliation status for each vendor
-- Focus on vendors serving trade shows and exhibits specifically
+- Established companies (5+ years in business)
+- Focus on companies that can work with outside clients (not exclusive house contractors)
+- Include union affiliation status
+- "Exhibit Fabricators / Builders" should be full-service custom exhibit houses, NOT just labor crews
+- "Rental Companies" should provide modular display systems, furniture, flooring, AV rentals
+- "General Contractors / I&D Labor" should be assembly/dismantle crews or official show GCs
 
 Return ONLY valid JSON. No markdown, no explanation.`;
 

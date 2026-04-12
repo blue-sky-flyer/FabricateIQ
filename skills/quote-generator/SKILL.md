@@ -41,12 +41,12 @@ Apply Toronto baseline ratios (adjust for location):
 - **Logistics**: 4-6% local, 12%+ out-of-town
 - **Storage**: $275/skid/month if needed
 
-**Location adjustments (see full city table below):**
-- Toronto: Design/PM 7-12%, I&D 11-17%, Logistics 4-6%
-- Montreal/out-of-town: Use 60-75% total services (observed: CCM Hockey 71.8%)
-- Vancouver: 1.30× Toronto I&D rate (BC union market)
-- US cities: apply city-specific rates from the table in "US City Service Rates" section
-- Union venue (MTCC/major convention centers): Add 3-5% to I&D
+**Location model — critical:**
+- **Toronto**: PTNR executes. Use observed data from MASTER_CATALOG. Design/PM 7-12%, I&D 11-17%, Logistics 4-6%.
+- **All other cities**: Assume a **local vendor in that city** executes the entire project (design, fabrication, I&D, logistics). PTNR has no involvement. Price accordingly using local market rates.
+- Service ratios for local vendor work are similar across cities (Design/PM 9-11%, I&D 13-16%, Logistics 4-5%). The cost difference is in the underlying material and labor prices — captured by the city cost multiplier.
+- Apply the city cost multiplier from the table in "City Cost Multipliers" section to scale all material and fabrication pricing.
+- Union venue premium (MTCC/major convention centers): Add 3-5% to I&D line item for union venues.
 
 ### Step 4: Generate Output
 
@@ -185,47 +185,43 @@ When adjusting an existing quote via chat (mode: "chat"), the user's current quo
 - ❌ Wrong: $650 pedestal + $400 vinyl wrap + $300 engineering + 10% PM = $1,200+
 - ❌ Wrong: Decomposing into materials + labor + engineering
 
-### Out-of-Town Projects (Montreal, etc.)
+### Non-Toronto City Projects
 
-**When to apply out-of-town rates:**
-- Location is Montreal, Quebec, Vancouver, USA, or anywhere outside Greater Toronto Area (GTA)
-- Brief mentions "travel", "out-of-town", or crew coming from Toronto
-- Venue is in a different province or country from the vendor
-- Project requires overnight stays for crew
+**Model: everything is local. PTNR has no involvement.**
 
-For projects outside Toronto/GTA, services increase significantly due to travel and specialized labor.
+When the location is anything other than Toronto, assume a **local exhibit company in that city** handles the complete project: design, fabrication, materials sourcing, I&D, and logistics. There is no travel from Toronto, no out-of-town crew, and no PTNR involvement.
 
-**CRITICAL: Out-of-Town Labor Rates (per labourer/day)**
+**What changes by city:**
+- The underlying **cost of materials and fabrication** is higher or lower depending on local labor rates, real estate, and market demand. Use the city cost multipliers below.
+- **Service ratios** (PM, I&D, logistics as % of fabrication subtotal) remain broadly similar to Toronto since these reflect industry-standard structuring, not travel premiums.
+- **Currency**: All US cities → USD. Canada cities → CAD.
 
-USE THESE RATES EXACTLY - they include all overhead, tools, insurance, and are much higher than local rates:
+### City Cost Multipliers
 
-| Role | Daily Rate | DO NOT USE |
-|------|-----------|------------|
-| Vinyl specialist | **$3,000-3,500/day** | NOT $500-800/day |
-| General labour | **$1,700-2,200/day** | NOT $400-700/day |
-| Overtime premium | **1.5x base rate** | For overnight work |
+Apply to the full fabrication/materials estimate to reflect local market pricing vs Toronto (1.0×):
 
-**Example calculation (vinyl install)**:
-- 5 vinyl specialists × 2 install days × $3,200/day = **$32,000**
-- NOT: 5 × 2 × $850 = $8,500 (WRONG - too low!)
+| City | Multiplier | Market Type | Key Notes |
+|------|-----------|-------------|-----------|
+| Toronto, ON | 1.00× | Home market | Baseline — use PTNR data directly |
+| Montreal, QC | 0.95× | Local QC vendors | QC fabrication slightly cheaper; local vendors only |
+| Vancouver, BC | 1.20× | Union (BC Building Trades) | Higher wages; Pacific port import costs |
+| New York / NJ | 1.75× | Heavy union | Highest-cost US market; Javits/MetLife |
+| Boston / Foxborough | 1.55× | Union | Northeast premium; BCEC/Gillette |
+| Philadelphia | 1.50× | Heavy union | Union market; PCC/Lincoln Financial |
+| Chicago | 1.45× | Heavy union | McCormick Place all-trades; Midwest hub |
+| Kansas City | 0.90× | Mixed | Central US; moderate costs; KCCC/Arrowhead |
+| Dallas | 0.85× | Open shop | No state income tax; lower labor; AT&T/KBH |
+| Houston | 0.85× | Open shop | Similar to Dallas; GRB/NRG |
+| Austin | 0.90× | Open shop | Tech-boom premium vs Dallas; Austin CC |
+| Miami | 1.10× | Union | Tourism/event demand; MBCC/Hard Rock |
+| Atlanta | 0.80× | Open shop | **Lowest-cost major US market**; GWCC/Mercedes-Benz |
+| Los Angeles | 1.65× | Union | CA prevailing wage + high real estate; LACC/SoFi |
+| Seattle | 1.35× | Union | Pacific NW wages; WSCC/Lumen Field |
+| San Francisco BA | 1.90× | Heavy union | **Highest-cost overall**; Moscone/Levi's |
 
-**Travel & Per Diem**:
-| Item | Rate | Notes |
-|------|------|-------|
-| Per diem | $350-450/person/day | Hotels + meals |
-| Site visits | $1,300-1,500/trip | Pre-install scouting |
+**How to apply**: Multiply your materials/fabrication estimate by the city factor before calculating services. For example, a $50,000 Toronto-equivalent fabrication project in NYC would be estimated at $87,500 (50,000 × 1.75).
 
-**Service Percentages (use as validation)**:
-| Service | Out-of-Town Rate |
-|---------|------------------|
-| Design/PM | 12-15% of total |
-| I&D Labor | 35-40% of total |
-| Logistics | 10-12% of total |
-| Travel/Per Diem | Calculate separately |
-| Repair Budget | 3-5% of total |
-| **Total Services** | **60-75% of total** |
-
-**Validation check**: If your total services are below 60%, you probably used wrong labor rates.
+**FIFA 2026 venues**: All 11 US host cities are in this table. Stadium events (MetLife, SoFi, AT&T, etc.) may add a union show-services surcharge of $8-12/sqft on top of standard rates — note this in quote assumptions when the venue is a stadium.
 
 **Tax Notes**:
 - Ontario: 13% HST
@@ -243,32 +239,23 @@ USE THESE RATES EXACTLY - they include all overhead, tools, insurance, and are m
 - Missouri (Kansas City): **9.6%** combined
 - Nevada / other USA: varies — default 8-10% if unknown
 
-### US City Service Rates
+### Local Service Ratios for Non-Toronto Cities
 
-Rates derived from 2022 Exhibitor Advocacy Rate Survey. Apply Design/PM and I&D as % of fabrication subtotal. Currency: USD for all US cities.
+When generating a quote for a non-Toronto city, use these service ratios (% of fabrication subtotal). These reflect how a **local exhibit company in that market** structures their pricing — not out-of-town travel rates.
 
-| City | Market | Design/PM | I&D Labor | Logistics | Notes |
-|------|--------|-----------|-----------|-----------|-------|
-| **Vancouver, BC** | Union | 10% | 18% | 8% | 1.30× Toronto; BC Building Trades |
-| **New York / NJ** | Heavy union | 10% | 36% | 18% | 2.55× Toronto; Teamsters/Carpenters/IBEW; Javits/MetLife |
-| **Boston / Foxborough** | Union | 10% | 31% | 17% | 2.20×; Carpenters/IATSE; BCEC & Gillette |
-| **Philadelphia** | Heavy union | 10% | 34% | 18% | 2.40×; highest material handling in US; PCC & Lincoln Financial |
-| **Chicago** | Heavy union | 10% | 28% | 17% | 2.00×; McCormick Place all-trades; verified rates Dec 2024 |
-| **Kansas City** | Mixed | 10% | 16% | 16% | 1.15×; KCCC limited union; Arrowhead |
-| **Dallas** | Open shop | 10% | 14% | 15% | 0.97×; Kay Bailey Hutchison CC; AT&T Stadium |
-| **Houston** | Open shop | 10% | 14% | 15% | 1.03×; George R. Brown CC; NRG Stadium |
-| **Austin** | Open shop | 10% | 15% | 15% | 1.10×; Austin CC; non-union advantage |
-| **Miami** | Union | 10% | 24% | 16% | 1.70×; Local 1175 Decorators; MBCC & Hard Rock |
-| **Atlanta** | Open shop | 10% | 13% | 15% | 0.90×; GWCC non-union = **lowest cost US market**; Mercedes-Benz |
-| **Los Angeles** | Union | 10% | 33% | 18% | 2.35×; IATSE Local 831; LACC & SoFi |
-| **Seattle** | Union | 10% | 25% | 17% | 1.80×; Carpenters/IBEW/IATSE; WSCC & Lumen Field |
-| **San Francisco BA** | Heavy union | 10% | 36% | 19% | 2.60×; CA prevailing wage + Bay Area premium; Moscone & Levi's |
+| City group | Design/PM | I&D Labor | Logistics | Notes |
+|---|---|---|---|---|
+| Toronto (observed PTNR data) | 7–12% | 11–17% | 4–6% | Use MASTER_CATALOG values directly |
+| Canada — local (MTL, YVR) | 9–10% | 13–15% | 4–5% | Local vendors, similar structure to Toronto |
+| USA — open shop (DAL, HOU, AUS, ATL, KC) | 9–10% | 12–14% | 4–5% | Non-union; lean service ratios |
+| USA — union markets (NYC, BOS, PHL, CHI, MIA, SEA) | 10–11% | 14–17% | 4–5% | Union I&D slightly higher % |
+| USA — heavy union / CA (LAX, SFO) | 10–11% | 15–17% | 5% | CA prevailing wage; union jurisdiction at major venues |
 
-**Important notes for US cities:**
-- All US quotes should be in **USD**
-- Stadium venues (MetLife, SoFi, AT&T, NRG, etc.) may have additional union rules vs convention centers — apply same city rates but note it in assumptions
-- Open-shop cities (Dallas, Houston, Austin, Atlanta) allow non-union labor; budget accordingly
-- Heavy-union cities (NYC, Chicago, Philadelphia, SF): budget for 4-hour minimums, show-site surcharges, and triple-time holidays
+**Notes:**
+- All US quotes → **USD**. Canada quotes → **CAD**.
+- Apply ratios to the **city-adjusted fabrication subtotal** (after applying city cost multiplier from table above).
+- Do **not** add out-of-town travel, per diem, or Toronto crew costs — local vendors only.
+- Stadium venues (MetLife, SoFi, AT&T, NRG, Gillette, Hard Rock, Mercedes-Benz, Lumen, Lincoln Financial, Arrowhead, Levi's) may add a union show-services surcharge of $8–12/sqft — note in quote assumptions.
 
 ### Project Benchmarks $/sqft
 | Type | Range | Notes |

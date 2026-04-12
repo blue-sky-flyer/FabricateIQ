@@ -1,4 +1,4 @@
-import { CATALOG_PRICING, GRAPHICS_PRICING, SERVICE_RATES } from './constants.js';
+import { CATALOG_PRICING, GRAPHICS_PRICING, SERVICE_RATES, CITY_COST_MULTIPLIERS } from './constants.js';
 
 // Named multipliers (replacing magic numbers)
 const DURATION_MULTIPLIERS = { 1: 1.0, 3: 0.82, 7: 0.60, 30: 0.65 };
@@ -66,9 +66,12 @@ export function calculateMaterials(comps) {
 
 /**
  * Calculate tiered estimates (aggressive/middle/conservative).
+ * For non-Toronto cities, a city cost multiplier is applied to the materials base to reflect
+ * local market pricing (all work assumed to be done by local vendors in the target city).
  */
 export function calculateEstimates(comps, location, duration, environment, groundLevel) {
-  const materials = calculateMaterials(comps);
+  const cityMultiplier = CITY_COST_MULTIPLIERS[location] ?? 1.0;
+  const materials = calculateMaterials(comps) * cityMultiplier;
   const subtotal = materials;
 
   const rates = SERVICE_RATES[location] || SERVICE_RATES.toronto;

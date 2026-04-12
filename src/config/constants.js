@@ -39,31 +39,57 @@ export const GRAPHICS_PRICING = {
 };
 
 // Service rate multipliers by location
-// I&D rates derived from 2022 Exhibitor Advocacy Rate Survey; multipliers vs Toronto baseline (0.14)
+// These are LOCAL vendor service ratios (Design/PM and I&D as % of fabrication subtotal).
+// Quotes assume all work is executed by local vendors in the target city — PTNR has no role
+// outside Toronto. The overall cost difference is captured in CITY_COST_MULTIPLIERS below.
 export const SERVICE_RATES = {
   // Canada
   toronto:       { designPM: 0.09, installDismantle: 0.14, logistics: 0.05 },
-  montreal:      { designPM: 0.12, installDismantle: 0.36, logistics: 0.12 },
-  vancouver:     { designPM: 0.10, installDismantle: 0.18, logistics: 0.08 }, // 1.30× union (BC Building Trades)
-  // USA — Northeast (heavily unionized)
-  new_york:      { designPM: 0.10, installDismantle: 0.36, logistics: 0.18 }, // 2.55× Teamsters/Carpenters/IBEW
-  boston:        { designPM: 0.10, installDismantle: 0.31, logistics: 0.17 }, // 2.20× Carpenters/IATSE
-  philadelphia:  { designPM: 0.10, installDismantle: 0.34, logistics: 0.18 }, // 2.40× highest material handling
+  montreal:      { designPM: 0.09, installDismantle: 0.14, logistics: 0.05 }, // local QC vendors
+  vancouver:     { designPM: 0.09, installDismantle: 0.14, logistics: 0.05 }, // local BC vendors
+  // USA — Northeast (slight union premium on I&D ratio)
+  new_york:      { designPM: 0.10, installDismantle: 0.16, logistics: 0.05 },
+  boston:        { designPM: 0.10, installDismantle: 0.16, logistics: 0.05 },
+  philadelphia:  { designPM: 0.10, installDismantle: 0.16, logistics: 0.05 },
   // USA — Midwest
-  chicago:       { designPM: 0.10, installDismantle: 0.28, logistics: 0.17 }, // 2.00× McCormick Place unions
-  kansas_city:   { designPM: 0.10, installDismantle: 0.16, logistics: 0.16 }, // 1.15× mixed market
-  // USA — South (open shop)
-  dallas:        { designPM: 0.10, installDismantle: 0.14, logistics: 0.15 }, // 0.97× open shop
-  houston:       { designPM: 0.10, installDismantle: 0.14, logistics: 0.15 }, // 1.03× open shop
-  austin:        { designPM: 0.10, installDismantle: 0.15, logistics: 0.15 }, // 1.10× open shop
-  miami:         { designPM: 0.10, installDismantle: 0.24, logistics: 0.16 }, // 1.70× Local 1175 Decorators
-  atlanta:       { designPM: 0.10, installDismantle: 0.13, logistics: 0.15 }, // 0.90× open shop GWCC — lowest cost US market
-  // USA — West (heavily unionized, CA prevailing wage)
-  los_angeles:   { designPM: 0.10, installDismantle: 0.33, logistics: 0.18 }, // 2.35× IATSE Local 831
-  seattle:       { designPM: 0.10, installDismantle: 0.25, logistics: 0.17 }, // 1.80× Carpenters/IBEW/IATSE
-  san_francisco: { designPM: 0.10, installDismantle: 0.36, logistics: 0.19 }, // 2.60× CA prevailing wage + Bay Area premium
+  chicago:       { designPM: 0.10, installDismantle: 0.15, logistics: 0.05 },
+  kansas_city:   { designPM: 0.09, installDismantle: 0.14, logistics: 0.04 },
+  // USA — South (open shop, lean service ratios)
+  dallas:        { designPM: 0.09, installDismantle: 0.13, logistics: 0.04 },
+  houston:       { designPM: 0.09, installDismantle: 0.13, logistics: 0.04 },
+  austin:        { designPM: 0.09, installDismantle: 0.13, logistics: 0.04 },
+  miami:         { designPM: 0.09, installDismantle: 0.14, logistics: 0.05 },
+  atlanta:       { designPM: 0.09, installDismantle: 0.13, logistics: 0.04 },
+  // USA — West (union premium on I&D ratio)
+  los_angeles:   { designPM: 0.10, installDismantle: 0.16, logistics: 0.05 },
+  seattle:       { designPM: 0.10, installDismantle: 0.15, logistics: 0.05 },
+  san_francisco: { designPM: 0.10, installDismantle: 0.16, logistics: 0.05 },
   // Generic fallback
-  usa:           { designPM: 0.10, installDismantle: 0.20, logistics: 0.15 },
+  usa:           { designPM: 0.09, installDismantle: 0.14, logistics: 0.05 },
+};
+
+// Whole-project cost multipliers vs Toronto baseline (1.0).
+// Applied to materials (fabrication, flooring, graphics) to reflect local market pricing.
+// Covers differences in labor costs, real estate, material sourcing, and market demand.
+// Source: industry cost-of-market indices + 2022 Exhibitor Advocacy Survey. Updated: 2026-04-12.
+export const CITY_COST_MULTIPLIERS = {
+  toronto:       1.00,
+  montreal:      0.95, // QC market slightly cheaper on fabrication
+  vancouver:     1.20, // BC union wages, Pacific port import costs
+  new_york:      1.75, // highest-cost market; union labor + NYC real estate overhead
+  boston:        1.55, // Northeast union premium
+  philadelphia:  1.50, // union market; slightly lower than NYC
+  chicago:       1.45, // McCormick Place union; Midwest logistics hub
+  kansas_city:   0.90, // central US; mixed market; lower labor costs
+  dallas:        0.85, // open shop; no state income tax; lower real estate
+  houston:       0.85, // open shop; similar to Dallas
+  austin:        0.90, // open shop but tech-boom premium; higher than Dallas
+  miami:         1.10, // tourism/event demand premium; mixed union
+  atlanta:       0.80, // lowest-cost major US market; open shop GWCC
+  los_angeles:   1.65, // CA prevailing wage + high real estate
+  seattle:       1.35, // Pacific Northwest union wages; lower than CA
+  san_francisco: 1.90, // highest overall; CA prevailing wage + Bay Area premium
+  usa:           1.30, // generic US average fallback
 };
 
 // Locations that bill in USD (all non-Canadian cities)

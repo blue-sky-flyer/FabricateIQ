@@ -595,7 +595,7 @@ const CITY_LABELS = {
   usa: 'USA',
 };
 
-const VENDOR_CATEGORIES = ['I&D Contractors', 'Exhibit Houses', 'Graphics / Print', 'AV / Lighting', 'Furniture Rental'];
+const VENDOR_CATEGORIES = ['Exhibit Fabricators / Builders', 'Rental Companies', 'Graphics / Print Shops', 'General Contractors / I&D Labor'];
 
 /**
  * Add recommended vendors as a separate worksheet tab.
@@ -640,7 +640,7 @@ function addVendorsWorksheet(workbook, vendorData, location) {
   // Disclaimer
   ws.mergeCells(r, 1, r, COLS);
   const disc = ws.getCell(r, 1);
-  disc.value = 'DISCLAIMER: Vendor list is informational only. Verify current availability, pricing, union affiliation, and insurance requirements directly with each vendor before engagement.';
+  disc.value = 'DISCLAIMER: These are local vendors in the project city that can execute the full project (fabrication, I&D, rentals, graphics). Verify current availability, pricing, union affiliation, and insurance directly with each vendor before engagement.';
   disc.font = { italic: true, size: 9, color: { argb: C.yellowText } };
   disc.fill = fillSolid(C.yellowBg);
   disc.alignment = { horizontal: 'left', wrapText: true };
