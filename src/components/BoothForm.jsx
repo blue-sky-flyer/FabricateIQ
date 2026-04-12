@@ -10,9 +10,35 @@ export default function BoothForm({ form, fileUpload }) {
         <div className="form-group">
           <label className="form-label">Location</label>
           <select value={location} onChange={(e) => setLocation(e.target.value)}>
-            <option value="toronto">Toronto</option>
-            <option value="montreal">Montreal</option>
-            <option value="usa">USA</option>
+            <optgroup label="Canada">
+              <option value="toronto">Toronto, ON</option>
+              <option value="montreal">Montreal, QC</option>
+              <option value="vancouver">Vancouver, BC</option>
+            </optgroup>
+            <optgroup label="USA — Northeast">
+              <option value="new_york">New York / New Jersey</option>
+              <option value="boston">Boston / Foxborough</option>
+              <option value="philadelphia">Philadelphia</option>
+            </optgroup>
+            <optgroup label="USA — Midwest">
+              <option value="chicago">Chicago</option>
+              <option value="kansas_city">Kansas City</option>
+            </optgroup>
+            <optgroup label="USA — South">
+              <option value="dallas">Dallas</option>
+              <option value="houston">Houston</option>
+              <option value="austin">Austin</option>
+              <option value="miami">Miami</option>
+              <option value="atlanta">Atlanta</option>
+            </optgroup>
+            <optgroup label="USA — West">
+              <option value="los_angeles">Los Angeles</option>
+              <option value="seattle">Seattle</option>
+              <option value="san_francisco">San Francisco Bay Area</option>
+            </optgroup>
+            <optgroup label="USA — Other">
+              <option value="usa">USA (Other)</option>
+            </optgroup>
           </select>
         </div>
 

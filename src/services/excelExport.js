@@ -585,7 +585,128 @@ function addSustainabilityWorksheet(workbook, sustainabilityData) {
 /**
  * Generate and download an Excel quote.
  */
-export async function downloadQuote(quote, { width, length, location, duration, getCurrency, sustainabilityData }) {
+// Human-readable city labels for vendor tab header
+const CITY_LABELS = {
+  toronto: 'Toronto, ON', montreal: 'Montreal, QC', vancouver: 'Vancouver, BC',
+  new_york: 'New York / New Jersey', boston: 'Boston / Foxborough', philadelphia: 'Philadelphia',
+  chicago: 'Chicago', kansas_city: 'Kansas City',
+  dallas: 'Dallas', houston: 'Houston', austin: 'Austin', miami: 'Miami', atlanta: 'Atlanta',
+  los_angeles: 'Los Angeles', seattle: 'Seattle', san_francisco: 'San Francisco Bay Area',
+  usa: 'USA',
+};
+
+const VENDOR_CATEGORIES = ['I&D Contractors', 'Exhibit Houses', 'Graphics / Print', 'AV / Lighting', 'Furniture Rental'];
+
+/**
+ * Add recommended vendors as a separate worksheet tab.
+ * vendorData shape: { city, last_updated, categories: { [categoryName]: [{name, specialty, website, notes, union}] } }
+ */
+function addVendorsWorksheet(workbook, vendorData, location) {
+  const COLS = 5;
+  const cityLabel = CITY_LABELS[location] || location;
+
+  const ws = workbook.addWorksheet('Vendors', {
+    pageSetup: {
+      fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+      paperSize: 9, orientation: 'landscape',
+      margins: { left: 0.5, right: 0.5, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 }
+    }
+  });
+
+  ws.columns = [{ width: 28 }, { width: 30 }, { width: 30 }, { width: 35 }, { width: 12 }];
+
+  let r = 1;
+
+  // Title
+  ws.mergeCells(r, 1, r, COLS);
+  const titleCell = ws.getCell(r, 1);
+  titleCell.value = `Recommended Vendors — ${cityLabel}`;
+  titleCell.font = { bold: true, size: 16, color: { argb: C.primaryDark } };
+  titleCell.fill = fillSolid(C.lightGray);
+  titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  ws.getRow(r).height = 32;
+  r++;
+
+  // Metadata
+  const lastUpdated = vendorData?.last_updated ? new Date(vendorData.last_updated).toLocaleDateString() : 'See note';
+  ws.getCell(r, 1).value = 'Last refreshed';
+  ws.getCell(r, 1).font = { color: { argb: C.medGray } };
+  ws.getCell(r, 2).value = lastUpdated;
+  ws.getCell(r, 2).font = { bold: true };
+  ws.getCell(r, 4).value = 'Refreshed quarterly via automated research';
+  ws.getCell(r, 4).font = { italic: true, color: { argb: C.medGray } };
+  r++;
+
+  // Disclaimer
+  ws.mergeCells(r, 1, r, COLS);
+  const disc = ws.getCell(r, 1);
+  disc.value = 'DISCLAIMER: Vendor list is informational only. Verify current availability, pricing, union affiliation, and insurance requirements directly with each vendor before engagement.';
+  disc.font = { italic: true, size: 9, color: { argb: C.yellowText } };
+  disc.fill = fillSolid(C.yellowBg);
+  disc.alignment = { horizontal: 'left', wrapText: true };
+  disc.border = { top: THIN_BORDER, bottom: THIN_BORDER, left: THIN_BORDER, right: THIN_BORDER };
+  ws.getRow(r).height = 28;
+  r += 2;
+
+  const categories = vendorData?.categories || {};
+
+  for (const category of VENDOR_CATEGORIES) {
+    const vendors = categories[category];
+    if (!vendors?.length) continue;
+
+    // Category header
+    ws.mergeCells(r, 1, r, COLS);
+    const catCell = ws.getCell(r, 1);
+    catCell.value = category;
+    catCell.font = { bold: true, size: 11, color: { argb: C.white } };
+    catCell.fill = fillSolid(C.darkBg);
+    catCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    catCell.border = { top: MED_BORDER, bottom: MED_BORDER, left: MED_BORDER, right: MED_BORDER };
+    ws.getRow(r).height = 22;
+    r++;
+
+    // Column headers
+    const colHeaders = ['Vendor', 'Specialty', 'Website / Contact', 'Notes', 'Union?'];
+    const headerRow = ws.getRow(r);
+    colHeaders.forEach((h, i) => {
+      const cell = headerRow.getCell(i + 1);
+      cell.value = h;
+      cell.font = { bold: true, size: 10, color: { argb: C.primaryDark } };
+      cell.fill = fillSolid(C.lightBlue);
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = { top: THIN_BORDER, bottom: THIN_BORDER, left: THIN_BORDER, right: THIN_BORDER };
+    });
+    ws.getRow(r).height = 18;
+    r++;
+
+    // Vendor rows
+    vendors.forEach((v, i) => {
+      const row = ws.getRow(r);
+      const bg = i % 2 === 0 ? C.white : C.lightGray;
+      [v.name || '', v.specialty || '', v.website || '', v.notes || '', v.union || ''].forEach((val, ci) => {
+        const cell = row.getCell(ci + 1);
+        cell.value = val;
+        cell.font = { size: 10 };
+        cell.fill = fillSolid(bg);
+        cell.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+        cell.border = { top: THIN_BORDER, bottom: THIN_BORDER, left: THIN_BORDER, right: THIN_BORDER };
+      });
+      ws.getRow(r).height = 20;
+      r++;
+    });
+
+    r++; // spacer between categories
+  }
+
+  // Footer note
+  ws.mergeCells(r, 1, r, COLS);
+  const footer = ws.getCell(r, 1);
+  footer.value = 'Vendor data automatically refreshed every 3 months. To trigger a manual refresh, contact your FabricateIQ administrator.';
+  footer.font = { italic: true, size: 9, color: { argb: C.medGray } };
+  footer.alignment = { horizontal: 'center' };
+}
+
+export async function downloadQuote(quote, { width, length, location, duration, getCurrency, sustainabilityData, vendorData }) {
   const specs = quote.booth_specs || {};
   const displaySpecs = {
     dimensions: specs.dimensions || `${width}ft x ${length}ft`,
@@ -621,6 +742,10 @@ export async function downloadQuote(quote, { width, length, location, duration, 
 
   if (sustainabilityData?.enhancements?.length > 0) {
     addSustainabilityWorksheet(workbook, sustainabilityData);
+  }
+
+  if (vendorData) {
+    addVendorsWorksheet(workbook, vendorData, location);
   }
 
   const buffer = await workbook.xlsx.writeBuffer();

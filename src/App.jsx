@@ -11,6 +11,7 @@ import { useQuote } from './hooks/useQuote';
 import { useChat } from './hooks/useChat';
 import { useFileUpload } from './hooks/useFileUpload';
 import { downloadQuote } from './services/excelExport';
+import { fetchVendors } from './services/api';
 
 export default function App() {
   const [error, setError] = useState('');
@@ -54,13 +55,15 @@ export default function App() {
       const sustainabilityData = aiQuote?.sustainability_enhancements?.length > 0
         ? { enhancements: aiQuote.sustainability_enhancements, summary: aiQuote.sustainability_summary }
         : null;
+      const vendorData = await fetchVendors(form.location);
       await downloadQuote(aiQuote, {
         width: form.width,
         length: form.length,
         location: form.location,
         duration: form.duration,
         getCurrency: form.getCurrency,
-        sustainabilityData
+        sustainabilityData,
+        vendorData
       });
     } catch (err) {
       setError('Download failed: ' + err.message);

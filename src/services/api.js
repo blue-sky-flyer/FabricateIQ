@@ -1,6 +1,7 @@
 import {
   CLAUDE_WORKER_URL,
   GEMINI_WORKER_URL,
+  VENDOR_WORKER_URL,
   WORKER_AUTH_TOKEN,
   DEFAULT_QUOTE_MODEL,
   PDF_TEXT_LIMIT
@@ -151,4 +152,20 @@ Use the calibrated service ratios from SKILL.md only if specific service costs a
 Provide a complete quote with materials breakdown, services (design/PM, install/dismantle, logistics), tax, and total. Use the calibrated service ratios from the SKILL.md for this project type.${descriptionBlock}`;
 
   return { promptText, wasTruncated: false };
+}
+
+/**
+ * Fetch vendor recommendations for a given location from the vendor Worker.
+ * Returns vendor data object or null if unavailable.
+ */
+export async function fetchVendors(location) {
+  try {
+    const response = await fetch(`${VENDOR_WORKER_URL}/vendors?city=${encodeURIComponent(location)}`, {
+      headers: { 'Authorization': `Bearer ${WORKER_AUTH_TOKEN}` }
+    });
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
 }

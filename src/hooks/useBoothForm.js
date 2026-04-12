@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { calculateBoothSpecs, calculateEstimates } from '../config/calculations.js';
+import { US_LOCATIONS } from '../config/constants.js';
 
 export function useBoothForm() {
   const [location, setLocation] = useState('toronto');
@@ -28,7 +29,7 @@ export function useBoothForm() {
     updateEstimates();
   }, [updateEstimates]);
 
-  const getCurrency = useCallback(() => location === 'usa' ? 'USD' : 'CAD', [location]);
+  const getCurrency = useCallback(() => US_LOCATIONS.has(location) ? 'USD' : 'CAD', [location]);
 
   return {
     location, setLocation,

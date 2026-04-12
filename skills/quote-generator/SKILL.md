@@ -41,9 +41,12 @@ Apply Toronto baseline ratios (adjust for location):
 - **Logistics**: 4-6% local, 12%+ out-of-town
 - **Storage**: $275/skid/month if needed
 
-**Location adjustments:**
+**Location adjustments (see full city table below):**
+- Toronto: Design/PM 7-12%, I&D 11-17%, Logistics 4-6%
 - Montreal/out-of-town: Use 60-75% total services (observed: CCM Hockey 71.8%)
-- Union venue (MTCC): Add 3-5% to I&D
+- Vancouver: 1.30× Toronto I&D rate (BC union market)
+- US cities: apply city-specific rates from the table in "US City Service Rates" section
+- Union venue (MTCC/major convention centers): Add 3-5% to I&D
 
 ### Step 4: Generate Output
 
@@ -225,8 +228,47 @@ USE THESE RATES EXACTLY - they include all overhead, tools, insurance, and are m
 **Validation check**: If your total services are below 60%, you probably used wrong labor rates.
 
 **Tax Notes**:
-- Quebec: GST 5% + QST 9.975% = 14.975% (not Ontario HST)
-- USA: Varies by state
+- Ontario: 13% HST
+- Quebec: GST 5% + QST 9.975% = **14.975%**
+- British Columbia: 5% GST + 7% PST = **12%**
+- New York: **8.875%** combined
+- California (LA, SF): **10.25%** combined
+- Texas (Dallas, Houston, Austin): **8.25%**
+- Massachusetts (Boston): **6.25%**
+- Illinois (Chicago): **10.25%** combined
+- Florida (Miami): **7–8%** (county-dependent; Miami-Dade ~7%)
+- Georgia (Atlanta): **4%** state + local = ~8.9% combined
+- Washington (Seattle): **10.35%** combined
+- Pennsylvania (Philadelphia): **8%** combined
+- Missouri (Kansas City): **9.6%** combined
+- Nevada / other USA: varies — default 8-10% if unknown
+
+### US City Service Rates
+
+Rates derived from 2022 Exhibitor Advocacy Rate Survey. Apply Design/PM and I&D as % of fabrication subtotal. Currency: USD for all US cities.
+
+| City | Market | Design/PM | I&D Labor | Logistics | Notes |
+|------|--------|-----------|-----------|-----------|-------|
+| **Vancouver, BC** | Union | 10% | 18% | 8% | 1.30× Toronto; BC Building Trades |
+| **New York / NJ** | Heavy union | 10% | 36% | 18% | 2.55× Toronto; Teamsters/Carpenters/IBEW; Javits/MetLife |
+| **Boston / Foxborough** | Union | 10% | 31% | 17% | 2.20×; Carpenters/IATSE; BCEC & Gillette |
+| **Philadelphia** | Heavy union | 10% | 34% | 18% | 2.40×; highest material handling in US; PCC & Lincoln Financial |
+| **Chicago** | Heavy union | 10% | 28% | 17% | 2.00×; McCormick Place all-trades; verified rates Dec 2024 |
+| **Kansas City** | Mixed | 10% | 16% | 16% | 1.15×; KCCC limited union; Arrowhead |
+| **Dallas** | Open shop | 10% | 14% | 15% | 0.97×; Kay Bailey Hutchison CC; AT&T Stadium |
+| **Houston** | Open shop | 10% | 14% | 15% | 1.03×; George R. Brown CC; NRG Stadium |
+| **Austin** | Open shop | 10% | 15% | 15% | 1.10×; Austin CC; non-union advantage |
+| **Miami** | Union | 10% | 24% | 16% | 1.70×; Local 1175 Decorators; MBCC & Hard Rock |
+| **Atlanta** | Open shop | 10% | 13% | 15% | 0.90×; GWCC non-union = **lowest cost US market**; Mercedes-Benz |
+| **Los Angeles** | Union | 10% | 33% | 18% | 2.35×; IATSE Local 831; LACC & SoFi |
+| **Seattle** | Union | 10% | 25% | 17% | 1.80×; Carpenters/IBEW/IATSE; WSCC & Lumen Field |
+| **San Francisco BA** | Heavy union | 10% | 36% | 19% | 2.60×; CA prevailing wage + Bay Area premium; Moscone & Levi's |
+
+**Important notes for US cities:**
+- All US quotes should be in **USD**
+- Stadium venues (MetLife, SoFi, AT&T, NRG, etc.) may have additional union rules vs convention centers — apply same city rates but note it in assumptions
+- Open-shop cities (Dallas, Houston, Austin, Atlanta) allow non-union labor; budget accordingly
+- Heavy-union cities (NYC, Chicago, Philadelphia, SF): budget for 4-hour minimums, show-site surcharges, and triple-time holidays
 
 ### Project Benchmarks $/sqft
 | Type | Range | Notes |
