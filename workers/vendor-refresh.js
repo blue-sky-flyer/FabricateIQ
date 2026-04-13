@@ -19,7 +19,7 @@
  * Secrets: ANTHROPIC_API_KEY, WORKER_AUTH_TOKEN
  */
 
-import { handleCors, verifyAuth, sanitizeError } from './middleware.js';
+import { getCorsHeaders, handleCorsPreflightIfNeeded, authenticateRequest, sanitizeError } from './middleware.js';
 
 // ---------------------------------------------------------------------------
 // Seed vendor data — used as fallback when KV is empty (e.g. before first cron)
@@ -434,10 +434,11 @@ async function handleScheduled(env) {
 // Fetch handler — serves vendor data via GET /vendors?city=xxx
 // ---------------------------------------------------------------------------
 async function handleFetch(request, env) {
-  const corsResponse = handleCors(request);
+  const corsResponse = handleCorsPreflightIfNeeded(request);
   if (corsResponse) return corsResponse;
 
-  const authError = verifyAuth(request, env);
+  const corsHeaders = getCorsHeaders(request);
+  const authError = authenticateRequest(request, env, corsHeaders);
   if (authError) return authError;
 
   const url = new URL(request.url);
@@ -454,7 +455,7 @@ async function handleFetch(request, env) {
       const all = JSON.parse(raw);
       const cityData = all[city] || all['usa'];
       return new Response(JSON.stringify(cityData), {
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' }
       });
     }
   } catch {
@@ -465,7 +466,7 @@ async function handleFetch(request, env) {
   const seedCity = VENDOR_SEED[city] || VENDOR_SEED['usa'];
   const fallback = { city, last_updated: null, categories: seedCity };
   return new Response(JSON.stringify(fallback), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' }
+    headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' }
   });
 }
 

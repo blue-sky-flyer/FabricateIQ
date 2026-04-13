@@ -1,7 +1,7 @@
 // Worker URLs
 export const CLAUDE_WORKER_URL = 'https://fabricateiq-proxy.raj-lucia001.workers.dev';
 export const GEMINI_WORKER_URL = 'https://fabricateiq-gemini.sp9n.workers.dev';
-export const VENDOR_WORKER_URL = 'https://fabricateiq-vendors.raj-lucia001.workers.dev';
+export const VENDOR_WORKER_URL = 'https://fabricateiq-vendors.sp9n.workers.dev';
 
 // Auth token for worker requests (client-side — prevents casual abuse, not truly secret)
 export const WORKER_AUTH_TOKEN = 'fiq-2024-public-client';

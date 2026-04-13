@@ -13,7 +13,7 @@ crons = ["0 0 1 */3 *"]
 binding = "VENDOR_KV"
 # After running: npx wrangler kv:namespace create "VENDOR_VENDORS"
 # paste the returned id here:
-id = ""
+id = "789dda9be91a42b6a67849a04e8ffcfd"
 # For local dev (wrangler dev), use preview_id:
 # preview_id = ""
 
