@@ -310,7 +310,8 @@ CRITICAL RULES:
 5. For I&D: show crew count, hours/days, and implied rate if calculable.
 6. Use whole numbers for dollar amounts. No markdown, no explanation, just the JSON.
 7. Include sustainability_enhancements: for each material line item, suggest a greener alternative with estimated cost delta using the SUSTAINABILITY GUIDE and MASTER_CATALOG pricing. Skip items with no viable alternative.
-8. Include sustainability_summary with totals and top_impact_items describing the most impactful changes.`;
+8. Include sustainability_summary with totals and top_impact_items describing the most impactful changes.
+9. BILLING MODEL — NON-TORONTO CITIES: When location is outside Toronto, a LOCAL vendor in that city executes the full project. There is NO cross-border shipping from Toronto, NO out-of-town travel or per diem, and NO export tax treatment. Apply the city cost multiplier to materials, use local service ratios (Design/PM 9-11%, I&D 13-17%, Logistics 4-5%), and apply the correct local tax rate (e.g. NYC = 8.875%, LA/SF = 10.25%, Dallas = 8.25%, Chicago = 10.25%, Atlanta = 8.9%, Seattle = 10.35%). The notes array MUST state: (a) the city multiplier vs Toronto baseline, (b) that all work is executed by local vendors with no cross-border shipping, (c) the correct local tax rate. NEVER write notes about out-of-town travel, cross-border logistics, or 0% export tax for any non-Toronto location.`;
     messages = messages.map((msg, i) =>
       i === lastMsgIndex ? { ...msg, content: msg.content + jsonInstructions } : msg
     );

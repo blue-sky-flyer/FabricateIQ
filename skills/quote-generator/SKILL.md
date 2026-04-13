@@ -5,6 +5,9 @@ description: Generate trade show booth quotes from requirements. Use when creati
 
 # Quote Generator
 
+> **CRITICAL — BILLING MODEL FOR ALL NON-TORONTO LOCATIONS**
+> When the project location is anywhere other than Toronto, a **local vendor in that city** executes the entire project (design, fabrication, I&D, logistics). There is **no involvement from PTNR or any Toronto supplier**, no cross-border shipping, no out-of-town travel, and no per diem. This is not an export transaction — do not apply 0% tax. Apply the correct local tax rate (NYC: 8.875% | LA/SF: 10.25% | Dallas/Houston/Austin: 8.25% | Chicago: 10.25% | Boston: 6.25% | Miami: ~7% | Atlanta: 8.9% | Seattle: 10.35% | Philadelphia: 8% | Kansas City: 9.6% | Montreal: 14.975% | Vancouver: 12%). The notes array must state the city cost multiplier vs Toronto and confirm local vendor execution.
+
 Generate accurate trade show booth quotes from natural language requirements, structured specifications, or project references.
 
 ## Input Formats
