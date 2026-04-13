@@ -48,6 +48,19 @@ Apply Toronto baseline ratios (adjust for location):
 - Apply the city cost multiplier from the table in "City Cost Multipliers" section to scale all material and fabrication pricing.
 - Union venue premium (MTCC/major convention centers): Add 3-5% to I&D line item for union venues.
 
+### project_type Assignment
+
+Use this field to classify the project — it controls which pricing model and service ratios the AI applies:
+
+| Value | When to use |
+|---|---|
+| `toronto_standard` | Location is Toronto/GTA; PTNR executes; standard show hours |
+| `toronto_festival` | Location is Toronto/GTA; non-standard hours (overnight, weekend, outdoor festival) |
+| `outoftown` | **Any city other than Toronto** — Vancouver, Montreal, NYC, Chicago, Dallas, Atlanta, etc. Local vendors execute the full project. |
+| `fabrication_only` | Props or fabrication only, no I&D services (e.g. a single riser, sign, or prop) |
+
+**Rule**: If the location is anything other than Toronto/GTA, the value MUST be `outoftown`. This means local vendors, city cost multiplier applied to materials, and local service ratios — never out-of-town travel or cross-border logistics.
+
 ### Step 4: Generate Output
 
 Produce itemized quote with:
@@ -256,6 +269,22 @@ When generating a quote for a non-Toronto city, use these service ratios (% of f
 - Apply ratios to the **city-adjusted fabrication subtotal** (after applying city cost multiplier from table above).
 - Do **not** add out-of-town travel, per diem, or Toronto crew costs — local vendors only.
 - Stadium venues (MetLife, SoFi, AT&T, NRG, Gillette, Hard Rock, Mercedes-Benz, Lumen, Lincoln Financial, Arrowhead, Levi's) may add a union show-services surcharge of $8–12/sqft — note in quote assumptions.
+
+### Required Notes for Non-Toronto City Quotes
+
+When `project_type = "outoftown"`, the `notes` array MUST include these statements (substitute actual city name and multiplier):
+
+1. `"Pricing based on [City] local market rates at [X.XX]× Toronto baseline."`
+2. `"All work (design, fabrication, I&D, logistics) executed by local vendors in [City]. No cross-border shipping from Toronto."`
+3. `"Tax rate: [X.X]% [state/provincial tax name] applied."` — use the correct rate from the Tax Notes table above
+4. If applicable: `"Union venue surcharge of $8–12/sqft applied for [Venue Name]."`
+
+**DO NOT include any of the following in notes for non-Toronto quotes:**
+- ❌ References to out-of-town travel, per diem, or Toronto crew
+- ❌ "Export from Canada" or "cross-border" language
+- ❌ 0% tax or "tax-exempt export" assumptions
+- ❌ Travel and labor premiums (only local market rates apply)
+- ❌ "PTNR" or any Toronto supplier name
 
 ### Project Benchmarks $/sqft
 | Type | Range | Notes |

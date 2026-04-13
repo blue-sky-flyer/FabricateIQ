@@ -14,8 +14,8 @@ import {
   checkRateLimit
 } from './middleware.js';
 
-const SKILL_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/main/skills/quote-generator/SKILL.md';
-const CATALOG_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/main/MASTER_CATALOG.md';
+const SKILL_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/feature/city-expansion-vendors/skills/quote-generator/SKILL.md';
+const CATALOG_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/feature/city-expansion-vendors/MASTER_CATALOG.md';
 const SUSTAINABILITY_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/main/public/SUSTAINABILITY_GUIDE.md';
 
 // Line item schema used within materials and services
@@ -50,7 +50,7 @@ const QUOTE_SCHEMA = {
     project_type: {
       type: "string",
       enum: ["toronto_standard", "toronto_festival", "outoftown", "fabrication_only"],
-      description: "Detected project profile"
+      description: "Detected project profile: 'toronto_standard'=PTNR Toronto work use MASTER_CATALOG rates; 'toronto_festival'=Toronto non-standard hours; 'outoftown'=ALL non-Toronto cities local vendors execute full project apply city cost multiplier + local service ratios; 'fabrication_only'=props/fabrication only 0% services"
     },
     materials: {
       type: "object",
@@ -275,7 +275,7 @@ async function handleQuoteMode(body, systemInstruction, env) {
     const jsonInstructions = `\n\nIMPORTANT: Return ONLY a valid JSON object with these exact fields:
 {
   "booth_specs": { "dimensions": "string", "square_footage": number, "location": "string", "event_name": "string", "duration_days": number },
-  "project_type": "toronto_standard" | "toronto_festival" | "outoftown" | "fabrication_only",
+  "project_type": "toronto_standard"(PTNR Toronto) | "toronto_festival"(Toronto non-standard hrs) | "outoftown"(ALL non-Toronto cities — local vendors, city cost multiplier) | "fabrication_only"(props only no services),
   "materials": {
     "walls": number, "walls_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
     "flooring": number, "flooring_line_items": [...],
