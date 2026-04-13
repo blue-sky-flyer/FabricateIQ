@@ -38,7 +38,7 @@ Use the embedded pricing reference below. For each component:
 Apply Toronto baseline ratios (adjust for location):
 - **Design/PM**: 7-16% of fabrication subtotal
 - **I&D Labor**: 11-17% (higher for union venues)
-- **Logistics**: 4-6% local, 12%+ out-of-town
+- **Logistics**: 4-6% (all cities — local vendors handle local logistics; no out-of-town shipping from Toronto)
 - **Storage**: $275/skid/month if needed
 
 **Location model — critical:**
@@ -367,25 +367,27 @@ Calculation:
 - HST (13%): $10,235
 - **Total: $88,964**
 
-**Example 3: Out-of-town (Montreal)**
+**Example 3: Non-Toronto city (Montreal — local vendor model)**
 User: "Multi-room venue activation in Montreal with large vinyl graphics, 2-day install, overnight dismantle"
 
+Model: Local Quebec exhibit company executes the full project. No PTNR involvement, no Toronto crew, no cross-border shipping.
+
 Calculation:
-- Fabrication (graphics, AGAM, etc.): $50,000
-- Services breakdown:
-  - Design/PM (12% of total): ~$22,000
-  - Vinyl I&D: 5 labourers × 3 days × $3,200/day = $48,000
-  - General labour: 4 labourers × 2.5 days × $2,000/day = $20,000
-  - Logistics (12%): ~$7,000
-  - Travel: 9 people × 5 days × $400/day = $18,000
-  - Site visits: 2 × $1,300 = $2,600
-  - Repair budget (3%): ~$5,500
-  - Equipment rental: $5,000
-- Services subtotal: ~$128,000
-- **Total services: 72% of project**
-- Grand total before tax: ~$178,000
-- Quebec tax (14.975%): ~$26,700
-- **Total: ~$205,000 CAD**
+- Fabrication base (Toronto equivalent): $50,000
+- Montreal city multiplier: 0.95× → fabrication subtotal = $47,500
+- Services (local QC vendor ratios):
+  - Design/PM @ 10% of $47,500 = $4,750
+  - I&D Labor @ 14% of $47,500 = $6,650 (overnight dismantle premium applies)
+  - Logistics @ 5% of $47,500 = $2,375
+- Services subtotal: $13,775 (~29% of fabrication)
+- Grand total before tax: $61,275
+- Quebec tax (14.975%): $9,181
+- **Total: ~$70,456 CAD**
+
+Notes in quote:
+- "Pricing based on Montreal local market rates at 0.95× Toronto baseline."
+- "All work (design, fabrication, I&D, logistics) executed by local vendors in Montreal. No cross-border shipping from Toronto."
+- "Tax rate: 14.975% (QC GST + QST) applied."
 
 **Example 4: Fabrication-only (simple component)**
 User: "Single display pedestal 48×36×30 with vinyl wrap, local pickup, no services"
