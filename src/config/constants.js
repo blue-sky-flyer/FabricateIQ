@@ -7,7 +7,7 @@ export const VENDOR_WORKER_URL = 'https://fabricateiq-vendors.sp9n.workers.dev';
 export const WORKER_AUTH_TOKEN = 'fiq-2024-public-client';
 
 // Default AI model for quote generation
-export const DEFAULT_QUOTE_MODEL = 'gemini-3-pro-preview';
+export const DEFAULT_QUOTE_MODEL = 'gemini-3-flash';
 
 // Duration options (days)
 export const DURATION_OPTIONS = [1, 3, 7, 30];
