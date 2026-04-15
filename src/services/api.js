@@ -117,6 +117,8 @@ export function buildQuotePrompt({ pdfText, description, width, length, location
 
 CRITICAL: The line items (individual costs for materials, labor, services) in the PDF are the PRIMARY source for this quote. Sum them up and categorize them appropriately.
 
+LOCATION OVERRIDE: The user has selected "${location}" as the project location. This overrides any location mentioned in the PDF (e.g. ignore any Toronto/PTNR references in the document). Apply the correct city cost multiplier, local service ratios, and tax rate for ${location} as defined in SKILL.md.
+
 PDF CONTENT:
 ${truncatedText}
 
@@ -125,8 +127,8 @@ Instructions:
 2. Sum line items into categories:
    - Materials: walls/fabrication, flooring, graphics, AV/lighting, furniture, rentals
    - Services: design/PM, install/dismantle, labor, logistics/shipping/drayage
-3. Extract booth dimensions and location if mentioned
-4. Apply appropriate tax rate based on location (13% Ontario HST, 14.975% Quebec GST+QST)
+3. Use the user-selected location (${location}) — do NOT infer location from the PDF content
+4. Apply the correct tax rate for ${location} as defined in SKILL.md
 5. The TOTAL should closely match the sum of line items from the PDF (plus tax if not included)
 
 Do NOT invent prices - use the actual line item costs from the PDF.

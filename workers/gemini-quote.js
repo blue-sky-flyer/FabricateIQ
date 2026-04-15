@@ -387,14 +387,15 @@ export default {
 
     try {
       // Fetch SKILL.md, MASTER_CATALOG, and SUSTAINABILITY_GUIDE at runtime (with timeout)
+      // Use 10s timeout and treat GitHub fetch failures as non-fatal where possible
       const [skillRes, catalogRes, sustainRes] = await Promise.all([
-        fetchWithTimeout(SKILL_URL),
-        fetchWithTimeout(CATALOG_URL),
-        fetchWithTimeout(SUSTAINABILITY_URL).catch(() => ({ ok: false }))
+        fetchWithTimeout(SKILL_URL, {}, 10000).catch(() => ({ ok: false })),
+        fetchWithTimeout(CATALOG_URL, {}, 10000).catch(() => ({ ok: false })),
+        fetchWithTimeout(SUSTAINABILITY_URL, {}, 10000).catch(() => ({ ok: false }))
       ]);
 
       if (!skillRes.ok || !catalogRes.ok) {
-        throw new Error('Failed to fetch skill or catalog from GitHub');
+        throw new Error('Failed to fetch skill or catalog from GitHub — please retry');
       }
 
       const skillContent = await skillRes.text();
