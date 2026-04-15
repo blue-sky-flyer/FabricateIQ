@@ -14,8 +14,8 @@ import {
   checkRateLimit
 } from './middleware.js';
 
-const SKILL_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/feature/city-expansion-vendors/skills/quote-generator/SKILL.md';
-const CATALOG_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/feature/city-expansion-vendors/MASTER_CATALOG.md';
+const SKILL_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/main/skills/quote-generator/SKILL.md';
+const CATALOG_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/main/MASTER_CATALOG.md';
 const SUSTAINABILITY_URL = 'https://raw.githubusercontent.com/blue-sky-flyer/FabricateIQ/main/public/SUSTAINABILITY_GUIDE.md';
 
 // Line item schema used within materials and services
