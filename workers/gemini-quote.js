@@ -274,33 +274,33 @@ async function handleQuoteMode(body, systemInstruction, env) {
     const lastMsgIndex = messages.length - 1;
     const jsonInstructions = `\n\nIMPORTANT: Return ONLY a valid JSON object with these exact fields:
 {
-  "booth_specs": { "dimensions": "string", "square_footage": number, "location": "string", "event_name": "string", "duration_days": number },
-  "project_type": "toronto_standard"(PTNR Toronto) | "toronto_festival"(Toronto non-standard hrs) | "outoftown"(ALL non-Toronto cities — local vendors, city cost multiplier) | "fabrication_only"(props only no services),
+  "booth_specs": {"dimensions": "20ft x 30ft", "square_footage": 600, "location": "New York", "event_name": "Trade Show", "duration_days": 3},
+  "project_type": "outoftown",
   "materials": {
-    "walls": number, "walls_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
-    "flooring": number, "flooring_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
-    "graphics": number, "graphics_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
-    "av_lighting": number, "av_lighting_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
-    "furniture": number, "furniture_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
-    "other": number, "other_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
-    "subtotal": number
+    "walls": 0, "walls_line_items": [{"item": "Back Wall Painted MDF", "qty": 1, "dimensions": "20x8ft", "unit_price": "$68.75/sqft", "extended": 11000, "confidence": "high"}],
+    "flooring": 0, "flooring_line_items": [{"item": "Standard Carpet", "qty": 600, "dimensions": "600 sqft", "unit_price": "$5.50/sqft", "extended": 3300, "confidence": "high"}],
+    "graphics": 0, "graphics_line_items": [{"item": "SEG Fabric Graphic", "qty": 1, "dimensions": "20x8ft", "unit_price": "$34/sqft", "extended": 5440, "confidence": "high"}],
+    "av_lighting": 0, "av_lighting_line_items": [{"item": "LED Monitor 55in", "qty": 2, "dimensions": "n/a", "unit_price": "$800 each", "extended": 1600, "confidence": "medium"}],
+    "furniture": 0, "furniture_line_items": [{"item": "Custom Counter", "qty": 1, "dimensions": "4x4ft", "unit_price": "$4400 each", "extended": 4400, "confidence": "high"}],
+    "other": 0, "other_line_items": [{"item": "Miscellaneous", "qty": 1, "dimensions": "n/a", "unit_price": "$500", "extended": 500, "confidence": "low"}],
+    "subtotal": 0
   },
   "services": {
-    "design_pm": number, "design_pm_percent": number, "design_pm_note": "string explaining basis",
-    "install_dismantle": number, "install_dismantle_percent": number, "install_dismantle_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
-    "logistics": number, "logistics_percent": number, "logistics_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
-    "storage": number, "storage_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
-    "subtotal": number
+    "design_pm": 0, "design_pm_percent": 0.10, "design_pm_note": "10% of fabrication subtotal",
+    "install_dismantle": 0, "install_dismantle_percent": 0.15, "install_dismantle_line_items": [{"item": "I&D Labor", "qty": 4, "dimensions": "2 days", "unit_price": "$850/day", "extended": 6800, "confidence": "medium"}],
+    "logistics": 0, "logistics_percent": 0.05, "logistics_line_items": [{"item": "Local Delivery", "qty": 1, "dimensions": "n/a", "unit_price": "$1200", "extended": 1200, "confidence": "medium"}],
+    "storage": 0, "storage_line_items": [{"item": "Pre-show storage", "qty": 2, "dimensions": "skids", "unit_price": "$275/skid/month", "extended": 550, "confidence": "medium"}],
+    "subtotal": 0
   },
-  "contingency": number,
-  "subtotal_before_tax": number,
-  "tax_rate": number,
-  "tax_amount": number,
-  "total": number,
-  "confidence": "high" | "medium" | "low",
-  "notes": ["string", ...],
-  "sustainability_enhancements": [{"category":"walls|flooring|graphics|furniture|av_lighting|other|operations","original_item":"string","original_cost":number,"suggested_item":"string","suggested_cost":number,"cost_delta":number,"cost_delta_percent":number,"environmental_impact":"HIGH|MEDIUM|LOW","notes":"string","confidence":"high|medium|low"}],
-  "sustainability_summary": {"total_original":number,"total_suggested":number,"net_cost_delta":number,"net_cost_delta_percent":number,"top_impact_items":["string"]}
+  "contingency": 0,
+  "subtotal_before_tax": 0,
+  "tax_rate": 0.08875,
+  "tax_amount": 0,
+  "total": 0,
+  "confidence": "medium",
+  "notes": ["Pricing based on New York local market rates at 1.75x Toronto baseline.", "All work executed by local vendors in New York. No cross-border shipping from Toronto.", "Tax rate: 8.875% NYC combined sales tax applied."],
+  "sustainability_enhancements": [{"category": "flooring", "original_item": "Standard Carpet", "original_cost": 3300, "suggested_item": "Recycled Content Carpet Tile", "suggested_cost": 3800, "cost_delta": 500, "cost_delta_percent": 15.2, "environmental_impact": "MEDIUM", "notes": "Recycled content tiles are reusable and divertible from landfill", "confidence": "medium"}],
+  "sustainability_summary": {"total_original": 3300, "total_suggested": 3800, "net_cost_delta": 500, "net_cost_delta_percent": 15.2, "top_impact_items": ["Switch flooring to recycled content tiles"]}
 }
 CRITICAL RULES:
 1. Extract booth_specs from the PDF content - dimensions, square footage, location, event name.
