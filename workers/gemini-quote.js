@@ -208,7 +208,7 @@ RULES:
     generationConfig: {
       temperature: 0.2,
       maxOutputTokens: 8192,
-      ...(isGemini3 && { thinkingConfig: { thinkingLevel: 'LOW' } })
+      ...(model.startsWith('gemini-3') && { thinkingConfig: { thinkingLevel: 'LOW' } })
     }
   };
 
@@ -327,7 +327,7 @@ CRITICAL RULES:
       ...(isGemini3 ? {} : { responseMimeType: 'application/json', responseSchema: QUOTE_SCHEMA }),
       temperature: 0.1,
       maxOutputTokens: 6144,
-      ...(isGemini3 && { thinkingConfig: { thinkingLevel: 'LOW' } })
+      ...(model.startsWith('gemini-3') && { thinkingConfig: { thinkingLevel: 'LOW' } })
     }
   };
 
