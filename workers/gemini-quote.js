@@ -144,7 +144,7 @@ const QUOTE_SCHEMA = {
  */
 async function handleChatMode(body, systemInstruction, env) {
   const model = validateModel(body.model);
-  const isGemini3 = model.startsWith('gemini-3');
+  const isGemini3 = true; // Apply structured JSON instructions to all supported models
   const { currentQuote, message, conversationHistory } = body;
 
   if (!currentQuote || typeof message !== 'string' || !message.trim()) {
@@ -262,7 +262,7 @@ RULES:
  */
 async function handleQuoteMode(body, systemInstruction, env) {
   const model = validateModel(body.model);
-  const isGemini3 = model.startsWith('gemini-3');
+  const isGemini3 = true; // Apply structured JSON instructions to all supported models
 
   const msgError = validateMessages(body.messages);
   if (msgError) {
