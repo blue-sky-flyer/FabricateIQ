@@ -278,18 +278,18 @@ async function handleQuoteMode(body, systemInstruction, env) {
   "project_type": "toronto_standard"(PTNR Toronto) | "toronto_festival"(Toronto non-standard hrs) | "outoftown"(ALL non-Toronto cities — local vendors, city cost multiplier) | "fabrication_only"(props only no services),
   "materials": {
     "walls": number, "walls_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
-    "flooring": number, "flooring_line_items": [...],
-    "graphics": number, "graphics_line_items": [...],
-    "av_lighting": number, "av_lighting_line_items": [...],
-    "furniture": number, "furniture_line_items": [...],
-    "other": number, "other_line_items": [...],
+    "flooring": number, "flooring_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
+    "graphics": number, "graphics_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
+    "av_lighting": number, "av_lighting_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
+    "furniture": number, "furniture_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
+    "other": number, "other_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
     "subtotal": number
   },
   "services": {
     "design_pm": number, "design_pm_percent": number, "design_pm_note": "string explaining basis",
-    "install_dismantle": number, "install_dismantle_percent": number, "install_dismantle_line_items": [...],
-    "logistics": number, "logistics_percent": number, "logistics_line_items": [...],
-    "storage": number, "storage_line_items": [...],
+    "install_dismantle": number, "install_dismantle_percent": number, "install_dismantle_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
+    "logistics": number, "logistics_percent": number, "logistics_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
+    "storage": number, "storage_line_items": [{"item": "string", "qty": number, "dimensions": "string", "unit_price": "string", "extended": number, "confidence": "high"|"medium"|"low"}],
     "subtotal": number
   },
   "contingency": number,
@@ -324,7 +324,7 @@ CRITICAL RULES:
     })),
     systemInstruction: { parts: [{ text: systemInstruction }] },
     generationConfig: {
-      ...(isGemini3 ? {} : { responseMimeType: 'application/json', responseSchema: QUOTE_SCHEMA }),
+      ...(!isGemini3 && { responseMimeType: 'application/json' }),
       temperature: 0.1,
       maxOutputTokens: 6144,
       ...(model.startsWith('gemini-3') && { thinkingConfig: { thinkingLevel: 'LOW' } })
