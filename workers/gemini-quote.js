@@ -228,7 +228,8 @@ RULES:
   }
 
   const geminiResponse = await response.json();
-  const textContent = geminiResponse.candidates?.[0]?.content?.parts?.[0]?.text;
+  const parts = geminiResponse.candidates?.[0]?.content?.parts || [];
+  const textContent = parts.find(p => !p.thought)?.text;
 
   if (!textContent) {
     throw new Error('No content in Gemini response');
@@ -327,7 +328,9 @@ CRITICAL RULES:
       ...(!isGemini3 && { responseMimeType: 'application/json' }),
       temperature: 0.1,
       maxOutputTokens: 6144,
-      ...(model.startsWith('gemini-3') && { thinkingConfig: { thinkingLevel: 'LOW' } })
+      ...(isGemini3
+        ? { thinkingConfig: { thinkingLevel: 'LOW' } }
+        : { thinkingConfig: { thinkingBudget: 0 } })
     }
   };
 
