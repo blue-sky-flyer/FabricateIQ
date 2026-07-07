@@ -1,6 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchChatResponse } from '../services/api.js';
 import { normalizeQuote } from './useQuote.js';
+import { applyQuotePatch } from '../services/quotePatch.js';
+import { logError } from '../services/logger.js';
+
+// Build the next quote from a chat response: prefer the section-level patch,
+// fall back to a full updatedQuote (legacy worker / full-rewrite responses).
+function nextQuoteFromResponse(currentQuote, data) {
+  if (data.patch || data.totals) {
+    return applyQuotePatch(currentQuote, data.patch, data.totals);
+  }
+  if (data.updatedQuote) {
+    return normalizeQuote(data.updatedQuote);
+  }
+  return null;
+}
 
 export function useChat(aiQuote, setAiQuote, setQuoteVersions) {
   const [showChat, setShowChat] = useState(false);
@@ -28,25 +42,28 @@ export function useChat(aiQuote, setAiQuote, setQuoteVersions) {
     try {
       const data = await fetchChatResponse(aiQuote, msg, chatMessages);
 
+      // Preview the merged result so "what if" can be applied later from the same data.
+      const preview = nextQuoteFromResponse(aiQuote, data);
+
       const assistantMsg = {
         role: 'assistant',
         content: data.response,
         whatIf: data.whatIf || false,
-        updatedQuote: data.updatedQuote,
+        updatedQuote: preview,
         timestamp: Date.now()
       };
       setChatMessages(prev => [...prev, assistantMsg]);
 
       // Auto-apply unless it's a "what if"
-      if (!data.whatIf && data.updatedQuote) {
-        const normalized = normalizeQuote(data.updatedQuote);
-        setAiQuote(normalized);
+      if (!data.whatIf && preview) {
+        setAiQuote(preview);
         setQuoteVersions(prev => [...prev, {
-          quote: normalized,
+          quote: preview,
           label: data.changesSummary || msg.substring(0, 50)
         }]);
       }
-    } catch {
+    } catch (err) {
+      logError('chat.send', err, { message: msg });
       setChatMessages(prev => [...prev, {
         role: 'assistant',
         content: 'Sorry, I had trouble processing that. Please try again.',

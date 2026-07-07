@@ -161,25 +161,45 @@ You are adjusting an existing booth quote through conversation. The user's curre
 
 RESPONSE FORMAT: Return ONLY a valid JSON object with these fields:
 {
-  "updatedQuote": { /* the COMPLETE quote JSON with changes applied */ },
+  "patch": { /* ONLY the top-level sections you changed, each COMPLETE */ },
+  "totals": {
+    "subtotal_before_tax": 0,
+    "contingency": 0,
+    "tax_rate": 0.13,
+    "tax_amount": 0,
+    "total": 0
+  },
   "response": "Natural language explanation of what changed and cost impact",
   "whatIf": false,
   "changesSummary": "Short label for version history"
 }
 
 RULES:
-- updatedQuote must contain the FULL quote (all fields), not just changed fields
-- Preserve all unchanged line items exactly as-is
-- Recalculate cascading totals: materials subtotal -> services -> contingency -> tax -> total
+- patch contains ONLY the top-level sections you modified. Valid keys:
+  booth_specs, project_type, materials, services, contingency, notes.
+- Each section you include in patch must be COMPLETE (all of its line items and
+  its own subtotal), NOT a partial diff. Omit sections you did not change.
+- Do NOT echo the entire quote. Do NOT include sections that are unchanged.
+- Do NOT touch or return sustainability_enhancements — it is managed separately
+  and is not part of this edit round-trip.
+- Preserve all unchanged line items within a changed section exactly as-is.
+- Always return "totals" recomputed from the merged result:
+  materials.subtotal + services.subtotal + contingency -> tax -> total.
 - If the user is asking a "what if" or exploratory question, set whatIf: true
-- Use whole numbers for dollar amounts
-- No markdown, no explanation outside the JSON`;
+  (still return patch + totals so the change can be previewed/applied).
+- Use whole numbers for dollar amounts.
+- No markdown, no explanation outside the JSON.`;
+
+  // sustainability_enhancements is large and never edited via chat — strip it
+  // from the quote we send so it doesn't consume input tokens. (The frontend
+  // also strips it; this is defense-in-depth for older/other callers.)
+  const { sustainability_enhancements, sustainability_summary, ...leanQuote } = currentQuote;
 
   // Build conversation messages for Gemini
   const geminiMessages = [
     {
       role: 'user',
-      parts: [{ text: `Here is the current quote JSON:\n\n${JSON.stringify(currentQuote, null, 2)}` }]
+      parts: [{ text: `Here is the current quote JSON:\n\n${JSON.stringify(leanQuote, null, 2)}` }]
     },
     {
       role: 'model',
@@ -207,7 +227,10 @@ RULES:
     systemInstruction: { parts: [{ text: chatSystemPrompt }] },
     generationConfig: {
       temperature: 0.2,
-      maxOutputTokens: 8192,
+      // Chat returns the FULL quote JSON. Large quotes (many line items +
+      // sustainability_enhancements) plus Gemini-3 thinking tokens overran the
+      // old 8192 cap, truncating the JSON and breaking the update. See below.
+      maxOutputTokens: 32768,
       ...(model.startsWith('gemini-3') && { thinkingConfig: { thinkingLevel: 'LOW' } })
     }
   };
@@ -228,8 +251,25 @@ RULES:
   }
 
   const geminiResponse = await response.json();
-  const parts = geminiResponse.candidates?.[0]?.content?.parts || [];
+  const candidate = geminiResponse.candidates?.[0];
+  const parts = candidate?.content?.parts || [];
   const textContent = parts.find(p => !p.thought)?.text;
+
+  // If the model hit the output cap, the JSON is truncated and unparseable.
+  // Surface a clear message instead of dumping raw JSON into the chat.
+  if (candidate?.finishReason === 'MAX_TOKENS') {
+    console.error('[Chat MAX_TOKENS]', JSON.stringify({ model, usage: geminiResponse.usageMetadata }));
+    return {
+      patch: null,
+      totals: null,
+      updatedQuote: null,
+      response: 'The update was too large to return in one response and got cut off. Try a more targeted change (e.g. adjust one section at a time).',
+      whatIf: false,
+      changesSummary: null,
+      model,
+      usage: geminiResponse.usageMetadata
+    };
+  }
 
   if (!textContent) {
     throw new Error('No content in Gemini response');
@@ -239,7 +279,15 @@ RULES:
   try {
     chatResult = cleanJsonFromAI(textContent);
   } catch {
+    console.error('[Chat parse fail]', JSON.stringify({
+      model,
+      finishReason: candidate?.finishReason,
+      len: textContent?.length,
+      usage: geminiResponse.usageMetadata
+    }));
     chatResult = {
+      patch: null,
+      totals: null,
       updatedQuote: null,
       response: textContent,
       whatIf: false,
@@ -249,6 +297,10 @@ RULES:
   }
 
   return {
+    patch: chatResult.patch || null,
+    totals: chatResult.totals || null,
+    // Legacy fallback: if the model returned a full quote instead of a patch,
+    // the frontend still applies it (backward/forward compatible during rollout).
     updatedQuote: chatResult.updatedQuote || null,
     response: chatResult.response || 'I processed your request but could not generate a response.',
     whatIf: chatResult.whatIf || false,
@@ -379,6 +431,22 @@ export default {
     // Rate limit check
     const rateLimitResponse = checkRateLimit(request, corsHeaders);
     if (rateLimitResponse) return rateLimitResponse;
+
+    // Client error log sink: persists frontend errors into Workers Logs so
+    // backend + frontend failures live in one searchable place. Rate-limited
+    // above; body capped below. Writes nothing, so no auth required.
+    const url = new URL(request.url);
+    if (url.pathname === '/log') {
+      const logSizeResponse = validateBodySize(request, corsHeaders, 16_000);
+      if (logSizeResponse) return logSizeResponse;
+      try {
+        const entry = await request.json();
+        console.error('[Client Error]', JSON.stringify(entry).slice(0, 4000));
+      } catch {
+        // ignore malformed log payloads — never fail the sink
+      }
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }
 
     // Authentication check
     const authResponse = authenticateRequest(request, env, corsHeaders);

@@ -1,0 +1,93 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - heading "FabricateIQ" [level=1] [ref=e5]
+    - paragraph [ref=e6]: Professional booth estimation powered by AI
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]: Location
+        - combobox [ref=e11]:
+          - option "Toronto" [selected]
+          - option "Montreal"
+          - option "USA"
+      - generic [ref=e12]:
+        - generic [ref=e13]: Environment
+        - generic [ref=e14]:
+          - button "Indoor" [ref=e15] [cursor=pointer]
+          - button "Outdoor" [ref=e16] [cursor=pointer]
+    - generic [ref=e17]:
+      - generic [ref=e18]: Booth Dimensions (feet)
+      - generic [ref=e19]:
+        - spinbutton [ref=e20]: "10"
+        - generic [ref=e21]: ×
+        - spinbutton [ref=e22]: "10"
+    - generic [ref=e23]:
+      - generic [ref=e24]: Duration
+      - generic [ref=e25]:
+        - button "1 day" [ref=e26] [cursor=pointer]
+        - button "3 days" [ref=e27] [cursor=pointer]
+        - button "7 days" [ref=e28] [cursor=pointer]
+        - button "30 days" [ref=e29] [cursor=pointer]
+    - generic [ref=e30]:
+      - generic [ref=e31]: Ground Level
+      - generic [ref=e32]:
+        - button "Yes" [ref=e33] [cursor=pointer]
+        - button "Not Sure" [ref=e34] [cursor=pointer]
+        - button "No" [ref=e35] [cursor=pointer]
+  - generic [ref=e36]:
+    - generic [ref=e37]: Upload (Optional)
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - img "booth-render-1.jpg" [ref=e40]
+        - generic "booth-render-1.jpg" [ref=e41]
+        - button "✕" [ref=e42] [cursor=pointer]
+      - generic [ref=e43]:
+        - img "booth-render-2.jpg" [ref=e44]
+        - generic "booth-render-2.jpg" [ref=e45]
+        - button "✕" [ref=e46] [cursor=pointer]
+      - generic [ref=e47]:
+        - img "booth-render-3.jpg" [ref=e48]
+        - generic "booth-render-3.jpg" [ref=e49]
+        - button "✕" [ref=e50] [cursor=pointer]
+    - button "Clear All" [ref=e51] [cursor=pointer]
+    - generic [ref=e52]:
+      - generic [ref=e53]: Description (Optional)
+      - textbox "Describe the booth requirements or provide context about the uploaded files..." [ref=e54]
+  - button "Generate AI Quote" [ref=e55] [cursor=pointer]
+  - generic [ref=e56]:
+    - generic [ref=e57] [cursor=pointer]:
+      - heading "Quick Estimates" [level=3] [ref=e58]
+      - generic [ref=e59]: ▼
+    - generic:
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - generic [ref=e62]: Budget
+          - generic [ref=e63]: CAD 164,443
+        - generic [ref=e64]:
+          - generic [ref=e65]: Standard
+          - generic [ref=e66]: CAD 202,138
+        - generic [ref=e67]:
+          - generic [ref=e68]: Premium
+          - generic [ref=e69]: CAD 255,507
+      - paragraph [ref=e70]: Template-based estimates. Use AI Quote for detailed, calibrated pricing.
+  - generic [ref=e71]:
+    - generic [ref=e72]:
+      - generic [ref=e73]:
+        - generic [ref=e74]: Adjust Your Quote
+        - generic [ref=e75]: v0
+      - button "✕" [ref=e76] [cursor=pointer]
+    - generic [ref=e78]:
+      - generic [ref=e79]: "Your quote is ready. Ask me to adjust it:"
+      - list [ref=e80]:
+        - listitem [ref=e81]: “Swap the G-Floor for carpet”
+        - listitem [ref=e82]: “Add 2 more lightboxes”
+        - listitem [ref=e83]: “What if we use AGAM walls instead of MDF?”
+        - listitem [ref=e84]: “Remove the AV package”
+        - listitem [ref=e85]: “What’s the total if we go to Montreal?”
+    - generic [ref=e86]:
+      - textbox "Ask to adjust your quote..." [ref=e87]
+      - button "Send" [disabled] [ref=e88]
+```

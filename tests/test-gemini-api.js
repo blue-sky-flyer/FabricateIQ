@@ -10,7 +10,7 @@
  *   node tests/test-gemini-api.js --verbose
  */
 
-const GEMINI_WORKER_URL = process.env.GEMINI_WORKER_URL || 'https://fabricateiq-gemini.raj-lucia001.workers.dev';
+const GEMINI_WORKER_URL = process.env.GEMINI_WORKER_URL || 'https://fabricateiq-gemini.sp9n.workers.dev';
 const WORKER_AUTH_TOKEN = process.env.WORKER_AUTH_TOKEN || '';
 const VERBOSE = process.argv.includes('--verbose');
 

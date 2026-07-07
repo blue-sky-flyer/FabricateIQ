@@ -2,6 +2,10 @@ name = "fabricateiq-gemini"
 main = "workers/gemini-quote.js"
 compatibility_date = "2024-01-01"
 
+# Persist console.* output to searchable Workers Logs (Cloudflare dashboard)
+[observability]
+enabled = true
+
 # Account and zone IDs are optional - wrangler will prompt if needed
 # account_id = ""
 

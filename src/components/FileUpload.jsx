@@ -1,4 +1,5 @@
 import FileList from './FileList';
+import { logError } from '../services/logger';
 
 export default function FileUpload({ fileUpload, onError }) {
   const {
@@ -14,6 +15,7 @@ export default function FileUpload({ fileUpload, onError }) {
       try {
         await handleMultipleFiles(e.dataTransfer.files);
       } catch (err) {
+        logError('file.drop', err);
         onError(err.message);
       }
     }
@@ -24,6 +26,7 @@ export default function FileUpload({ fileUpload, onError }) {
       try {
         await handleMultipleFiles(e.target.files);
       } catch (err) {
+        logError('file.select', err);
         onError(err.message);
       }
     }

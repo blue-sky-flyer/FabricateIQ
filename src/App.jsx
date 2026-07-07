@@ -12,6 +12,7 @@ import { useChat } from './hooks/useChat';
 import { useFileUpload } from './hooks/useFileUpload';
 import { downloadQuote } from './services/excelExport';
 import { fetchVendors } from './services/api';
+import { logError } from './services/logger';
 
 export default function App() {
   const [error, setError] = useState('');
@@ -46,6 +47,7 @@ export default function App() {
       });
       chat.resetChat();
     } catch (err) {
+      logError('quote.generate', err, { location: form.location });
       setError('AI Quote failed: ' + err.message);
     }
   };
@@ -66,6 +68,7 @@ export default function App() {
         vendorData
       });
     } catch (err) {
+      logError('excel.export', err, { location: form.location });
       setError('Download failed: ' + err.message);
     }
   };

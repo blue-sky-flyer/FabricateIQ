@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from 'react';
 import { analyzeWithClaude } from '../services/api.js';
+import { logError } from '../services/logger.js';
 
 const MAX_FILES = 3;
 
@@ -114,6 +115,7 @@ export function useFileUpload(updateEstimates) {
         updateEstimates(extracted);
       }
     } catch (err) {
+      logError('file.analyze', err, { fileId: id });
       setFiles(prev => prev.map(f =>
         f.id === id ? { ...f, analyzing: false, error: err.message } : f
       ));

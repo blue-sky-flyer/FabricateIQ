@@ -1,0 +1,157 @@
+<testsuites id="" name="" tests="12" failures="3" skipped="0" errors="0" time="12.240433999999999">
+<testsuite name="file-upload.spec.js" timestamp="2026-03-19T03:46:51.334Z" hostname="chromium" tests="12" failures="3" skipped="0" time="33.362" errors="0">
+<testcase name="Multi-file upload feature › uploads two image files and shows both in the file list" classname="file-upload.spec.js" time="1.923">
+</testcase>
+<testcase name="Multi-file upload feature › shows error when attempting to exceed the 3-file maximum" classname="file-upload.spec.js" time="7.102">
+<failure message="file-upload.spec.js:75:3 shows error when attempting to exceed the 3-file maximum" type="FAILURE">
+<![CDATA[  [chromium] › file-upload.spec.js:75:3 › Multi-file upload feature › shows error when attempting to exceed the 3-file maximum 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.error-banner')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('.error-banner')
+
+
+      102 |     // The error banner should surface the "Maximum 3 files" message.
+      103 |     // Give React a moment to re-render.
+    > 104 |     await expect(pom.errorBanner).toBeVisible({ timeout: 5_000 });
+          |                                   ^
+      105 |     await expect(pom.errorBanner).toContainText(/maximum 3 files|Maximum 3 files/i);
+      106 |   });
+      107 |
+        at C:\Users\raj_s\Dropbox\Hanoz, Raj - Booth Cost Estimation\frontend\e2e\file-upload.spec.js:104:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\test-results\file-upload-Multi-file-upl-2b0af-o-exceed-the-3-file-maximum-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ..\test-results\file-upload-Multi-file-upl-2b0af-o-exceed-the-3-file-maximum-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\test-results\file-upload-Multi-file-upl-2b0af-o-exceed-the-3-file-maximum-chromium\error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|..\test-results\file-upload-Multi-file-upl-2b0af-o-exceed-the-3-file-maximum-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|..\test-results\file-upload-Multi-file-upl-2b0af-o-exceed-the-3-file-maximum-chromium\video.webm]]
+
+[[ATTACHMENT|..\test-results\file-upload-Multi-file-upl-2b0af-o-exceed-the-3-file-maximum-chromium\error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Multi-file upload feature › removes an individual file and shows the upload zone again" classname="file-upload.spec.js" time="2.072">
+</testcase>
+<testcase name="Multi-file upload feature › Clear All removes all files and clears the description" classname="file-upload.spec.js" time="2.072">
+</testcase>
+<testcase name="Multi-file upload feature › description textarea accepts text up to 2000 characters" classname="file-upload.spec.js" time="1.936">
+</testcase>
+<testcase name="Multi-file upload feature › uploading a PDF with text disables dimension and environment fields" classname="file-upload.spec.js" time="7.785">
+<failure message="file-upload.spec.js:201:3 uploading a PDF with text disables dimension and environment fields" type="FAILURE">
+<![CDATA[  [chromium] › file-upload.spec.js:201:3 › Multi-file upload feature › uploading a PDF with text disables dimension and environment fields 
+
+    Error: expect(locator).toBeDisabled() failed
+
+    Locator:  locator('input[placeholder="Width"]')
+    Expected: disabled
+    Received: enabled
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeDisabled" with timeout 5000ms
+      - waiting for locator('input[placeholder="Width"]')
+        9 × locator resolved to <input min="1" step="0.5" value="10" type="number" placeholder="Width"/>
+          - unexpected value "enabled"
+
+
+      217 |
+      218 |     // hasPdfText = true → pdfDisabled = true → form fields disabled
+    > 219 |     await expect(pom.widthInput).toBeDisabled();
+          |                                  ^
+      220 |     await expect(pom.lengthInput).toBeDisabled();
+      221 |     await expect(pom.indoorBtn).toBeDisabled();
+      222 |     await expect(pom.outdoorBtn).toBeDisabled();
+        at C:\Users\raj_s\Dropbox\Hanoz, Raj - Booth Cost Estimation\frontend\e2e\file-upload.spec.js:219:34
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\test-results\file-upload-Multi-file-upl-80576-sion-and-environment-fields-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ..\test-results\file-upload-Multi-file-upl-80576-sion-and-environment-fields-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\test-results\file-upload-Multi-file-upl-80576-sion-and-environment-fields-chromium\error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|..\test-results\file-upload-Multi-file-upl-80576-sion-and-environment-fields-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|..\test-results\file-upload-Multi-file-upl-80576-sion-and-environment-fields-chromium\video.webm]]
+
+[[ATTACHMENT|..\test-results\file-upload-Multi-file-upl-80576-sion-and-environment-fields-chromium\error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Multi-file upload feature › uploading an image keeps dimension and environment fields enabled" classname="file-upload.spec.js" time="1.896">
+</testcase>
+<testcase name="Multi-file upload feature › upload zone is keyboard focusable and has correct ARIA attributes" classname="file-upload.spec.js" time="4.961">
+</testcase>
+<testcase name="Multi-file upload feature › upload zone disappears when exactly 3 files are uploaded" classname="file-upload.spec.js" time="1.02">
+</testcase>
+<testcase name="Multi-file upload feature › Clear All button is hidden when no files are uploaded" classname="file-upload.spec.js" time="0.933">
+</testcase>
+<testcase name="Multi-file upload feature › upload zone gets the dragging class while a drag is in progress" classname="file-upload.spec.js" time="0.818">
+<failure message="file-upload.spec.js:353:3 upload zone gets the dragging class while a drag is in progress" type="FAILURE">
+<![CDATA[  [chromium] › file-upload.spec.js:353:3 › Multi-file upload feature › upload zone gets the dragging class while a drag is in progress 
+
+    Error: locator.dispatchEvent: TypeError: Failed to construct 'DragEvent': Failed to read the 'dataTransfer' property from 'DragEventInit': Failed to convert value to 'DataTransfer'.
+        at InjectedScript.dispatchEvent (<anonymous>:7540:17)
+        at eval (eval at eval (:6726:24), <anonymous>:2:22)
+        at eval (eval at evaluate (:290:30), <anonymous>:9:51)
+        at UtilityScript.evaluate (<anonymous>:292:16)
+        at UtilityScript.<anonymous> (<anonymous>:1:44)
+    Call log:
+      - waiting for locator('.upload-zone')
+
+        at InjectedScript.dispatchEvent (<anonymous>:7540:17)
+        at eval (eval at eval (:6726:24), <anonymous>:2:22)
+        at eval (eval at evaluate (:290:30), <anonymous>:9:51)
+        at UtilityScript.evaluate (<anonymous>:292:16)
+        at UtilityScript.<anonymous> (<anonymous>:1:44)
+        at C:\Users\raj_s\Dropbox\Hanoz, Raj - Booth Cost Estimation\frontend\e2e\file-upload.spec.js:357:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\test-results\file-upload-Multi-file-upl-2a3f8-while-a-drag-is-in-progress-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ..\test-results\file-upload-Multi-file-upl-2a3f8-while-a-drag-is-in-progress-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\test-results\file-upload-Multi-file-upl-2a3f8-while-a-drag-is-in-progress-chromium\error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|..\test-results\file-upload-Multi-file-upl-2a3f8-while-a-drag-is-in-progress-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|..\test-results\file-upload-Multi-file-upl-2a3f8-while-a-drag-is-in-progress-chromium\video.webm]]
+
+[[ATTACHMENT|..\test-results\file-upload-Multi-file-upl-2a3f8-while-a-drag-is-in-progress-chromium\error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Multi-file upload feature › shows an error indicator on a file item when analysis fails" classname="file-upload.spec.js" time="0.844">
+</testcase>
+</testsuite>
+</testsuites>

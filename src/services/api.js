@@ -6,6 +6,7 @@ import {
   DEFAULT_QUOTE_MODEL,
   PDF_TEXT_LIMIT
 } from '../config/constants.js';
+import { logError } from './logger.js';
 
 /**
  * Shared fetch wrapper that includes auth header.
@@ -89,9 +90,12 @@ export async function fetchAIQuote(promptText) {
  * Returns { updatedQuote, response, whatIf, changesSummary, model, usage }.
  */
 export async function fetchChatResponse(currentQuote, message, conversationHistory) {
+  // sustainability_enhancements is large and not needed for edits — strip it
+  // before sending. It's preserved client-side and re-attached after merge.
+  const { sustainability_enhancements, sustainability_summary, ...leanQuote } = currentQuote || {};
   return authenticatedFetch(GEMINI_WORKER_URL, {
     mode: 'chat',
-    currentQuote,
+    currentQuote: leanQuote,
     message,
     conversationHistory: conversationHistory.slice(-10),
     model: DEFAULT_QUOTE_MODEL
@@ -167,7 +171,9 @@ export async function fetchVendors(location) {
     });
     if (!response.ok) return null;
     return response.json();
-  } catch {
+  } catch (err) {
+    // Vendors are optional (graceful degradation) — log but don't surface.
+    logError('vendors.fetch', err, { location });
     return null;
   }
 }
